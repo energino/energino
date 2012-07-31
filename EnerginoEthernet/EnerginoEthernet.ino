@@ -13,6 +13,10 @@
  * Supported commands from the serial:
  *  #F<feed>, sets the feed id [default is 0]
  *  #K<key>, sets the COSM authentication key [default is -]
+ *  #A<integer>, sets value of the R1 resistor in Kohm [default is 100]
+ *  #B<integer>, sets value of the R2 resistor in Kohm [default is 10]
+ *  #C<integer>, sets th offset in mV [default is 2500]
+ *  #C<integer>, sets th sensitivity in mV [default is 850]
  *  #P<integer>, sets the period between two updates (in ms) [default is 2000]
  *  #R, resest the configuration to the defaults
  * No updates are sent if the feed id is set to 0
@@ -71,15 +75,11 @@ IPAddress MASK(255,255,255,0);
 IPAddress GW(172,25,18,254);
 
 // Energino parameters
-long R1 = 100000;
-long R2 = 10000;
-float OFFSET = 2.69;
-float SENSITIVITY = 0.850;
-long PERIOD = 2000;
-
-// Coordinates
-float LAT=51.5235375648154;
-float LON=-0.0807666778564453;
+int R1 = 100;
+int R2 = 10;
+int OFFSET = 2500;
+int SENSITIVITY = 850;
+int PERIOD = 2000;
 
 // Buffers used for parsing HTTP request lines
 char buffer[STRING_BUFFER_SIZE];
@@ -108,6 +108,10 @@ struct settings_t {
   char magic[17];
   char apikey[49];
   long period;
+  int r1;
+  int r2;
+  int offset;
+  int sensitivity;
   long feed;
   IPAddress host;
   long port;
@@ -124,10 +128,14 @@ void reset() {
   DBG Serial.println("Writing defaults.");  
   strcpy (settings.magic,MAGIC);
   settings.period = PERIOD;
+  settings.r1 = R1;
+  settings.r2 = R2;
+  settings.offset = OFFSET;
+  settings.sensitivity = SENSITIVITY;
   settings.feed = FEED;
   settings.host = HOST;
   settings.port = PORT;
-  strcpy (settings.apikey,KEY);
+  strcpy (settings.apikey,KEY);  
 }
 
 void setup() {
@@ -137,7 +145,7 @@ void setup() {
   pinMode(13,OUTPUT);
   digitalWrite(13, LOW);
   // configuring serial
-  Serial.begin(115200);
+  Serial.begin(115200);   
   // Loading setting 
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
   if (strcmp(settings.magic, MAGIC) != 0) {
@@ -206,12 +214,31 @@ void serParseCommand()
     }
   } 
   else if (cmd == 'P') {
-    long value = atol(inputBytesPtr);
+    int value = atoi(inputBytesPtr);
     if (value > 0) {
       settings.period = value;
     }
-  } 
-  else if (cmd == 'K') {
+  } else if (cmd == 'A') {
+    int value = atoi(inputBytesPtr);
+    if (value >= 0) {
+      settings.r1 = value;
+    }
+  } else if (cmd == 'B') {
+    int value = atoi(inputBytesPtr);
+    if (value >= 0) {
+      settings.r2 = value;
+    }
+  } else if (cmd == 'C') {
+    int value = atoi(inputBytesPtr);
+    if (value >= 0) {
+      settings.offset = value;
+    }
+  } else if (cmd == 'D') {
+    int value = atoi(inputBytesPtr);
+    if (value >= 0) {
+      settings.sensitivity = value;
+    }
+  } else if (cmd == 'K') {
     strncpy(settings.apikey, inputBytes,49);
     settings.apikey[48] = '\0';
   }
@@ -234,7 +261,6 @@ void serParseCommand()
       DBG Serial.println(value);
       settings.port = value;
     }
-    
   }   
   else if (cmd == 'R') {
     reset();
@@ -368,8 +394,8 @@ void sendData() {
 }
 
 char * getDatastreams() {
-  float i = getCurrent(A0, OFFSET, SENSITIVITY);
-  float v = getVoltage(A1, R1, R2);
+  float i = getCurrent(A0, settings.offset, settings.sensitivity);
+  float v = getVoltage(A1, settings.r1, settings.r2);
   strcpy (buffer,"{\"version\":\"1.0.0\",");
   strcat (buffer,"\"datastreams\":[");
   strcat (buffer,"{\"id\":\"current\",\"current_value\":\"");
@@ -384,11 +410,7 @@ char * getDatastreams() {
   strcat (buffer,"{\"id\":\"switch\", \"current_value\":\"");
   strcat (buffer,itoa(digitalRead(RELAY_PIN),r,10));
   strcat (buffer,"\"}");
-  strcat (buffer,"],\"location\":{\"lat\":");
-  strcat (buffer,dtostrf (LAT, 8, 5, r));
-  strcat (buffer,",\"lon\":");
-  strcat (buffer,dtostrf (LON, 8, 5, r));
-  strcat (buffer,"}}");
+  strcat (buffer,"]}");
   // Print data also on the serial
   Serial.print("#");
   Serial.print(MAGIC);
@@ -428,7 +450,7 @@ char * getDatastreams() {
   return buffer;
 }
 
-float getVoltage(int pin, long r1, long r2) {
+float getVoltage(int pin, int r1, int r2) {
   long readings = 0;
   for(int i = 0; i < SAMPLES; i++) {
     readings += analogRead(pin);
@@ -443,6 +465,5 @@ float getCurrent(int pin, float offset, float sensitivity) {
     readings += analogRead(pin);
   }
   long IRaw = readings / SAMPLES;
-  return ((float) IRaw * 5 / ( 1024 ) - offset) / sensitivity;
+  return ((float) IRaw * 5 * 1000 / 1024  - offset) / sensitivity;
 }
-
