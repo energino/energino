@@ -354,9 +354,9 @@ class Daemonino(threading.Thread):
             if tot_clients >= 4:
                 ALWAYS_ON = [ 1, 2, 3 ]
             elif tot_clients >= 2:
-                ALWAYS_ON = [ 1, 2 ]
+                ALWAYS_ON = [ 2, 3 ]
             else:
-                ALWAYS_ON = [ 2 ]
+                ALWAYS_ON = [ 3 ]
             feeds = self.feeds.get('')
             if feeds[0] != 200:
                 continue 
