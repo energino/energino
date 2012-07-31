@@ -54,19 +54,16 @@
 #endif
 
 // Feed id
-long FEED = 0;
+const long FEED = 0;
+const char KEY[] = "-";
 
 // Cosm configuration
-//IPAddress HOST(216,52,233,121);
-//const long PORT = 80;
-
-// Daemonino configuration
-IPAddress HOST(192,168,9,250);
-const long PORT = 8181;
+IPAddress HOST(216,52,233,121);
+const long PORT = 80;
 
 // Assign a MAC address for the ethernet controller.
 byte MAC[] = { 
-  0x90, 0xA2, 0xDA, 0x0A, 0x00, 0xCC };
+  0x90, 0xA2, 0xDA, 0x0D, 0x1D, 0x95 };
   
 // This configuration is used when DHCP fails
 IPAddress IP(172,25,18,219);
@@ -112,6 +109,8 @@ struct settings_t {
   char apikey[49];
   long period;
   long feed;
+  IPAddress host;
+  long port;
 } 
 settings;
 
@@ -126,8 +125,9 @@ void reset() {
   strcpy (settings.magic,MAGIC);
   settings.period = PERIOD;
   settings.feed = FEED;
-  settings.apikey[0] = '-';
-  settings.apikey[1] = '\0';
+  settings.host = HOST;
+  settings.port = PORT;
+  strcpy (settings.apikey,KEY);
 }
 
 void setup() {
@@ -215,6 +215,27 @@ void serParseCommand()
     strncpy(settings.apikey, inputBytes,49);
     settings.apikey[48] = '\0';
   }
+  else if (cmd == 'H') {
+    byte host[4];
+    char *p = strtok(inputBytes, ".");  
+    for (int i = 0; i < 4; i++) {
+        host[i] = atoi(p);
+        p = strtok(NULL, ".");
+    }
+    IPAddress hostIP = IPAddress(host);
+    DBG Serial.print("New host ip address: ");
+    DBG Serial.println(hostIP);
+    settings.host=IPAddress(host);
+  }  
+  else if (cmd == 'S') {
+    long value = atol(inputBytesPtr);
+    if (value > 0) {
+      DBG Serial.print("New host port: ");
+      DBG Serial.println(value);
+      settings.port = value;
+    }
+    
+  }   
   else if (cmd == 'R') {
     reset();
   }
@@ -308,7 +329,7 @@ void sendData() {
   char *json = getDatastreams();
   // if there's a successful connection:
   DBG Serial.println("Connecting.");
-  if ((settings.feed != 0) && client.connect(HOST, PORT)) {
+  if ((settings.feed != 0) && client.connect(settings.host, settings.port)) {
     DBG Serial.println("connected.");
     DBG Serial.print("PUT /v2/feeds/");
     DBG Serial.println(settings.feed);
@@ -392,13 +413,13 @@ char * getDatastreams() {
   Serial.print(",");
   for (byte thisByte = 0; thisByte < 4; thisByte++) {
     // print the value of each byte of the IP address:
-    Serial.print(HOST[thisByte], DEC);
+    Serial.print(settings.host[thisByte], DEC);
     if (thisByte < 3) {
       Serial.print(".");
     }
   }
   Serial.print(",");
-  Serial.print(PORT);
+  Serial.print(settings.port);
   Serial.print(",");
   Serial.print(settings.feed);
   Serial.print(",");
