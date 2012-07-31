@@ -122,7 +122,7 @@ class Pisolino(Dispatcher):
                 self.discover()
                 # setup serial port
                 energino = PyEnergino(self.device, self.bps, self.interval)
-                energino.send_cmds([ "#F%s" % self.feed ])                
+                energino.send_cmds([ "#F%s" % self.feed, "#H%s" % self.host, "#S%s" % self.port  ])                
                 # start updating
                 logging.info("begin polling")
                 while True:
