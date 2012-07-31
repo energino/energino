@@ -373,19 +373,19 @@ class Daemonino(threading.Thread):
                         if self.state[id_feed]['state'] != STATE_OFFLINE:
                             self.state[id_feed]['counter'] = self.state[id_feed]['counter'] + 1
                         if self.state[id_feed]['state'] == STATE_ONLINE and self.state[id_feed]['counter'] > ONLINE_TIMEOUT:
+                            logging.debug("no clients for node %u setting state to %s" % (id_feed, STATE_IDLE))
                             self.state[id_feed]['state'] = STATE_IDLE
                             self.state[id_feed]['counter'] = 0
                         if self.state[id_feed]['state'] == STATE_IDLE and self.state[id_feed]['counter'] > IDLE_TIMEOUT:
+                            logging.debug("no clients for node %u setting state to %s" % (id_feed, STATE_OFFLINE))
                             self.state[id_feed]['state'] = STATE_OFFLINE
                             self.state[id_feed]['counter'] = 0
                     else:
                         self.state[id_feed]['state'] = STATE_ONLINE
                         self.state[id_feed]['counter'] = 0
-                    
                 if id_feed in ALWAYS_ON:
                     self.state[id_feed]['state'] = STATE_ONLINE
                     self.state[id_feed]['counter'] = 0
-                logging.debug("feed %u state %s counter %u" % (id_feed, self.state[id_feed]['state'], self.state[id_feed]['counter']))
                 self.set_switch(result, self.state[id_feed]['state'])
                 self.set_idle(result, self.state[id_feed]['state'])
             time.sleep(TICK)
@@ -408,6 +408,8 @@ class Daemonino(threading.Thread):
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
             logging.error("url not available %s, reason %s" % (url, e.reason))
+        except:
+            logging.exception("Exception:")        
 
     def set_idle(self, result, state):
         try:
@@ -418,16 +420,18 @@ class Daemonino(threading.Thread):
                 elif state in [ STATE_OFFLINE ]:
                     result['datastreams']['duty_cycle']['current_value'] = OFFLINE_DUTY_CYCLE
                 else:
-                    #url = 'http://' + result['energino'] + ':8180/write/switch/1'
-                    #logging.info("opening url %s" % url)
-                    #res = urlopen(url, timeout=2)
-                    #status = json.loads(res.read())
-                    #result['datastreams']['switch']['duty_cycle'] = status[0]
-                    result['datastreams']['switch']['duty_cycle'] = IDLE_DUTY_CYCLE
+                    conn = httplib.HTTPConnection(host=result['dispatcher'], port=8180, timeout=10)
+                    conn.request('PUT', "/ap/duty_cycle/%u" % 50)
+                    resp = conn.getresponse()                    
+                    if resp.status == 200:
+                        result['datastreams']['duty_cycle']['duty_cycle'] = 50
+                        result['datastreams']['duty_cycle']['duty_cycle'] = IDLE_DUTY_CYCLE
         except HTTPError, e:
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
             logging.error("url not available %s, reason %s" % (url, e.reason))
+        except:
+            logging.exception("Exception:")        
 
     def shutdown(self):
         self.stop.set()
