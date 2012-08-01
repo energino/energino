@@ -50,6 +50,20 @@ from energino import MODEL_ENERGINO_ETHERNET
 DEFAULT_PORT=8181
 DEFAULT_WWW_ROOT='/etc/energinod/www/'
 
+STATE_ONLINE="online"
+STATE_IDLE="idle"
+STATE_OFFLINE="offline"
+
+IDLE_DUTY_CYCLE = 50
+ONLINE_DUTY_CYCLE = 100
+OFFLINE_DUTY_CYCLE = 0
+
+ONLINE_TIMEOUT=30
+IDLE_TIMEOUT=60
+TICK=1
+
+ALWAYS_ON=[]
+
 class JSONMergeError(Exception):
     def __init__(self, value):
         self.value = value
@@ -311,25 +325,12 @@ class Listener(ThreadingMixIn, TCPServer):
         logging.info("serving from: %s" % self.www_root)
         TCPServer.__init__(self, ("", port), ListenerHandler)
 
-STATE_ONLINE="online"
-STATE_IDLE="idle"
-STATE_OFFLINE="offline"
-
-IDLE_DUTY_CYCLE = 50
-ONLINE_DUTY_CYCLE = 100
-OFFLINE_DUTY_CYCLE = 0
-
-ONLINE_TIMEOUT=2
-IDLE_TIMEOUT=2
-TICK=1
-
-ALWAYS_ON=[]
-
 class Daemonino(threading.Thread):
     
-    def __init__(self, feeds):
+    def __init__(self, feeds, autonomic):
         super(Daemonino, self).__init__()
         self.feeds = feeds
+        self.autonomic = autonomic
         self.daemon = True
         self.stop = threading.Event()
         self.state = {}
@@ -350,6 +351,9 @@ class Daemonino(threading.Thread):
     def run(self):
         logging.info("starting up daemonino")
         while True:
+            if not self.autonomic:
+                time.sleep(TICK)
+                continue
             tot_clients = self.get_tot_num_clients()
             if tot_clients >= 4:
                 ALWAYS_ON = [ 1, 2, 3 ]
@@ -455,6 +459,7 @@ if __name__ == "__main__":
     p.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
     p.add_option('--www', '-w', dest="www", default=DEFAULT_WWW_ROOT)
     p.add_option('--log', '-l', dest="log")
+    p.add_option('--autonomic', '-a', action="store_true", dest="autonomic", default=False)    
     options, arguments = p.parse_args()
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(message)s', filename=options.log, filemode='w')
@@ -462,7 +467,7 @@ if __name__ == "__main__":
     host = socket.gethostbyname(socket.gethostname())
     feeds = Feeds(host, int(options.port))
     
-    daemonino = Daemonino(feeds)
+    daemonino = Daemonino(feeds, options.autonomic)
     daemonino.start()
     
     listener = Listener(host, feeds, int(options.port), options.www)
