@@ -1,22 +1,32 @@
-.album{
-  width:100%;
-  background-color:white; 
-  padding: 10px; 
-  float: left
+#container {
+	width: 800px;
+	margin: 0 auto;
+	font-family: sans;
 }
 
-.album .image {
-  float: left; 
-  width: 160px; 
+#feeds td {
+	padding: 4px;
+	font-family: sans;
 }
 
-.album .footer {
-  text-align: left;
-  padding-top: 0px; 
-  padding-bottom: 0px; 
+#feeds th.header_left {
+	padding: 4px;
+	text-align: left;
+	font-family: sans;
+	font-size: 12pt;
 }
 
-.footer p {
-  font-family: sans-serif;
+#feeds th {
+	padding: 4px;
+	font-family: sans;
+	font-size: 12pt;
 }
 
+.chart {
+	width: 50%; 
+	margin: 0 auto;
+}
+
+.foot {
+	font-size: 10pt;
+}

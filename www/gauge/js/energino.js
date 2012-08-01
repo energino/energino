@@ -70,7 +70,17 @@ function plot(data) {
         for (node in data['results']) {
             var id = data['results'][node]['id']
             var title = data['results'][node]['title']
-            document.getElementById('root').innerHTML += '<div class="image"><div class="footer"><p>Node ' + title + '</p></div><div id="chart' + id + '"></div><div id="chart_dc' + id + '"></div></div>';
+            if ('dispatcher' in data['results'][node]) {
+                var dispatcher = data['results'][node]['dispatcher']
+            } else {
+                var dispatcher = "n.a."
+            }
+            if ('energino' in data['results'][node]) {
+                var energino = data['results'][node]['energino']
+            } else {
+                var energino = "n.a."
+            }
+            document.getElementById('feeds').innerHTML += '<tr><td><p class="head">Feed: ' + id + '</p><p class="foot">Node: ' + title + '<br />Energino: ' + energino + '<br />Dispatcher: ' + dispatcher + '</p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {
@@ -91,7 +101,7 @@ function plot(data) {
         ]);
         var tableDutyCycle = google.visualization.arrayToDataTable([
             ['Label', 'Value'],
-            ['Cycle [%]', parseFloat(dutyCycle)]
+            ['Duty [%]', parseFloat(dutyCycle)]
         ]);
         var chart = new google.visualization.Gauge(document.getElementById("chart" + id));
         var chartDutyCycle = new google.visualization.Gauge(document.getElementById("chart_dc" + id));
