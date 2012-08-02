@@ -76,7 +76,7 @@ class ListenerHandler(SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps( [ ap.getDutyCycle() ] ) + '\n')
+                self.wfile.write(json.dumps( [ ap.getDutyCycle(), ap.getDutyCycleWindow() ] ) + '\n')
             else:
                 self.send_error(404)
         else:
@@ -88,8 +88,18 @@ class ListenerHandler(SimpleHTTPRequestHandler):
             if len(tokens) == 3 and tokens[0] == 'ap':
                 if tokens[1] ==  'duty_cycle':
                     duty_cycle = int(tokens[2])
-                    ap.setDutyCycle(duty_cycle)
+                    ap.setDutyCycle(duty_cycle, ap.getDutyCycleWindow())
                     self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps( [ ap.getDutyCycle(), ap.getDutyCycleWindow() ] ) + '\n')
+                elif tokens[1] ==  'duty_cycle_window':
+                    duty_cycle_window = int(tokens[2])
+                    ap.setDutyCycle(ap.getDutyCycle, duty_cycle_window)
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps( [ ap.getDutyCycle(), ap.getDutyCycleWindow() ] ) + '\n')
                 else:
                     self.send_error(404)
             else:
@@ -132,6 +142,9 @@ class AccessPoint(threading.Thread):
     def getDutyCycle(self):
         return self.duty_cycle
 
+    def getDutyCycleWindow(self):
+        return self.duty_cycle_window
+
     def setDutyCycle(self, duty_cycle, duty_cycle_window):
         # setting duty cycle
         if duty_cycle < 0 or duty_cycle > 100:
@@ -146,8 +159,8 @@ class AccessPoint(threading.Thread):
         # computing intervals
         self.up_interval = int(self.duty_cycle_window * self.duty_cycle / 100)
         self.down_interval = int(self.duty_cycle_window * (100 - self.duty_cycle) / 100)
-        logging.info("access point up interval is %us" % self.up_interval)
-        logging.info("access point down interval is %us" % self.down_interval)
+        logging.info("access point up interval set to %us" % self.up_interval)
+        logging.info("access point down interval set to %us" % self.down_interval)
 
     def ifconfig(self, iface, mode):
         cmd = Command(["/sbin/ifconfig", iface, mode])
