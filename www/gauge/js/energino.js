@@ -7,12 +7,12 @@ google.setOnLoadCallback(initialize);
 var options = {
     width: 150,
     height: 150,
-    redFrom: 18,
-    redTo: 20,
-    yellowFrom: 17,
-    yellowTo: 18,
+    redFrom: 7,
+    redTo: 8,
+    yellowFrom: 6.5,
+    yellowTo: 7,
     min: 0,
-    max: 20,
+    max: 8,
 };
 
 var optionsDutyCycle = {
@@ -80,7 +80,7 @@ function plot(data) {
             } else {
                 var energino = "n.a."
             }
-            document.getElementById('feeds').innerHTML += '<tr><td><p class="head">Feed: ' + id + '</p><p class="foot">Node: ' + title + '<br />Energino: ' + energino + '<br />Dispatcher: ' + dispatcher + '</p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td><p class="head">Feed: ' + id + '</p><p class="details">Node: ' + title + '<br />Energino: ' + energino + '<br />Dispatcher: ' + dispatcher + '</p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {
@@ -94,6 +94,9 @@ function plot(data) {
             if (data['results'][node]['datastreams'][datastream]['id'] == 'duty_cycle') {
                 dutyCycle = data['results'][node]['datastreams'][datastream]['current_value']
             }
+        }
+	if (parseFloat(amperes) < 0) {
+		amperes = "0.0"
         }
         var table = google.visualization.arrayToDataTable([
             ['Label', 'Value'],

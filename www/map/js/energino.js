@@ -108,6 +108,9 @@ function plot(data) {
                 relay = data['results'][node]['datastreams'][datastream]['current_value']
             }
         }
+	if (parseFloat(amperes) < 0) {
+		amperes = "0.0"
+        }
         var beach = locations[id]
         var feed = data['results'][node]['feed']
         var title = data['results'][node]['title']
