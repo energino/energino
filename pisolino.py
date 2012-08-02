@@ -37,7 +37,9 @@ import uuid
 import sys
 import optparse
 import json 
+import threading
 
+from subprocess import Popen, PIPE
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 from SocketServer import TCPServer
 from SocketServer import ThreadingMixIn
@@ -46,6 +48,17 @@ from energino import PyEnergino
 
 DEFAULT_SERVER_PORT=8180
 DEFAULT_CONFIG = '/etc/pachubino.conf'
+
+DEFAULT_DUTY_CYCLE = 50
+DEFAULT_DUTY_CYCLE_WINDOW = 30
+
+STATIONS_PATH = '/sys/kernel/debug/ieee80211/phy0/netdev:wlan0/stations'
+
+MASTER_IFACE="wlan0"
+MONITOR_IFACE="wlan0-1"
+
+IFACE_MODE_UP="up"
+IFACE_MODE_DOWN="down"
 
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
@@ -91,21 +104,85 @@ class Listener(ThreadingMixIn, TCPServer):
         logging.info("RESTful interface listening on port: %u" % port)
         TCPServer.__init__(self, ("", port), ListenerHandler)
 
-class AccessPoint(object):
+
+class Command(object):
+
+    def __init__(self, cmd):
+        self.cmd = cmd
+
+    def run(self):
+        
+        self.process = Popen(self.cmd, shell=False, stdout=PIPE, stderr=PIPE, close_fds=True)
+        (self.stdout, self.stderr) = self.process.communicate()
+
+        return self.process.returncode   
+
+class AccessPoint(threading.Thread):
     
     def __init__(self):
-        self.path='/sys/kernel/debug/ieee80211/phy0/netdev:wlan0/stations'
-        self.duty_cycle=100
+        super(AccessPoint, self).__init__()
+        self.daemon = True
+        self.stop = threading.Event()        
+        self.setDutyCycle(DEFAULT_DUTY_CYCLE, DEFAULT_DUTY_CYCLE_WINDOW)
+        self.isDown = False
 
     def getClients(self):
-        return len(os.listdir(self.path))
+        return len(os.listdir(STATIONS_PATH))
     
     def getDutyCycle(self):
         return self.duty_cycle
 
-    def setDutyCycle(self, duty_cycle):
-        if len(os.listdir(self.path)) == 0:
-            self.duty_cycle=duty_cycle
+    def setDutyCycle(self, duty_cycle, duty_cycle_window):
+        # setting duty cycle
+        if duty_cycle < 0 or duty_cycle > 100:
+            self.duty_cycle = DEFAULT_DUTY_CYCLE
+        else:
+            self.duty_cycle = duty_cycle
+        # setting duty cycle window
+        if duty_cycle_window < 30 or duty_cycle_window > 300:
+            self.duty_cycle_window = DEFAULT_DUTY_CYCLE_WINDOW
+        else:
+            self.duty_cycle_window = duty_cycle_window
+        # computing intervals
+        self.up_interval = int(self.duty_cycle_window * self.duty_cycle / 100)
+        self.down_interval = int(self.duty_cycle_window * (100 - self.duty_cycle) / 100)
+        logging.info("access point up interval is %us" % self.up_interval)
+        logging.info("access point down interval is %us" % self.down_interval)
+
+    def ifconfig(self, iface, mode):
+        cmd = Command(["/sbin/ifconfig", iface, mode])
+        ret = cmd.run()
+        if ret is None or ret != 0:
+            logging.warning("unable to execute command: %s" % " ".join(cmd.cmd))
+
+    def ifdown(self):
+        if self.getClients() == 0 and not self.isDown:
+            logging.info("bringing down interfaces")
+            self.isDown = True
+            self.ifconfig(MASTER_IFACE, IFACE_MODE_DOWN)
+            self.ifconfig(MONITOR_IFACE, IFACE_MODE_DOWN)
+
+    def ifup(self):
+        if self.getClients() == 0 and self.isDown:
+            logging.info("bringing up interfaces")
+            self.isDown = False
+            self.ifconfig(MASTER_IFACE, IFACE_MODE_UP)
+            self.ifconfig(MONITOR_IFACE, IFACE_MODE_UP)
+
+    def shutdown(self):
+        logging.info("shutting down pisolino")
+        self.stop.set()
+
+    def run(self):
+        while True:
+            if self.up_interval > 0:
+                logging.info("up interval (%us), number of associated stations %u" % (self.up_interval, self.getClients()))
+                self.ifup()
+                time.sleep(self.up_interval)
+            if self.down_interval > 0:
+                logging.info("down interval (%us), number of associated stations %u" % (self.up_interval, self.getClients()))
+                self.ifdown()
+                time.sleep(self.down_interval)
                 
 class Pisolino(Dispatcher):
         
@@ -140,6 +217,7 @@ class Pisolino(Dispatcher):
        
 def sigint_handler(signal, frame):
     pisolino.shutdown()
+    ap.shutdown()
     sys.exit(0)
 
 if __name__ == "__main__":
@@ -165,6 +243,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGTERM, sigint_handler)
 
     ap = AccessPoint()
+    ap.start()
 
     pisolino = Pisolino(options.uuid, options.config)
     pisolino.start()    
