@@ -46,7 +46,7 @@ from SocketServer import ThreadingMixIn
 from dispatcher import Dispatcher, BACKOFF
 from energino import PyEnergino
 
-DEFAULT_SERVER_PORT=8180
+DEFAULT_SERVER_PORT = 8180
 DEFAULT_CONFIG = '/etc/pachubino.conf'
 
 DEFAULT_DUTY_CYCLE = 50
