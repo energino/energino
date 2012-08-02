@@ -419,17 +419,21 @@ class Daemonino(threading.Thread):
         try:
             if 'duty_cycle' in result['datastreams']:
                 url = None
-                if state in [ STATE_ONLINE ]:
-                    result['datastreams']['duty_cycle']['current_value'] = ONLINE_DUTY_CYCLE
-                elif state in [ STATE_OFFLINE ]:
+                if state in [ STATE_OFFLINE ]:
                     result['datastreams']['duty_cycle']['current_value'] = OFFLINE_DUTY_CYCLE
                 else:
-                    conn = httplib.HTTPConnection(host=result['dispatcher'], port=8180, timeout=10)
-                    conn.request('PUT', "/ap/duty_cycle/%u" % 50)
-                    resp = conn.getresponse()                    
-                    if resp.status == 200:
-                        result['datastreams']['duty_cycle']['duty_cycle'] = 50
-                        result['datastreams']['duty_cycle']['duty_cycle'] = IDLE_DUTY_CYCLE
+                    if state == STATE_ONLINE:                    
+                        newDutyCycle = ONLINE_DUTY_CYCLE
+                    else:
+                        newDutyCycle = IDLE_DUTY_CYCLE
+                    if result['datastreams']['duty_cycle']['current_value'] != newDutyCycle:
+                        logging.info("feed %u, setting duty cycle to %u" % (result['id'], newDutyCycle) )
+                        conn = httplib.HTTPConnection(host=result['dispatcher'], port=8180, timeout=10)
+                        conn.request('PUT', "/ap/duty_cycle/%u" % newDutyCycle)
+                        resp = conn.getresponse()
+                        if resp.status == 200:
+                            data = json.loads(resp.read())
+                            result['datastreams']['duty_cycle']['current_value'] = data[0]
         except HTTPError, e:
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
