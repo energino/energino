@@ -49,7 +49,7 @@ from energino import PyEnergino
 DEFAULT_SERVER_PORT = 8180
 DEFAULT_CONFIG = '/etc/pachubino.conf'
 
-DEFAULT_DUTY_CYCLE = 50
+DEFAULT_DUTY_CYCLE = 100
 DEFAULT_DUTY_CYCLE_WINDOW = 30
 
 STATIONS_PATH = '/sys/kernel/debug/ieee80211/phy0/netdev:wlan0/stations'

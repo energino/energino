@@ -46,7 +46,6 @@ from SocketServer import TCPServer
 from SocketServer import ThreadingMixIn
 from urllib2 import urlopen, URLError, HTTPError
 from energino import MODEL_ENERGINO_ETHERNET
-from pisolino import DEFAULT_DUTY_CYCLE
 
 DEFAULT_PORT=8181
 DEFAULT_WWW_ROOT='/etc/energinod/www/'
@@ -56,7 +55,7 @@ STATE_IDLE="idle"
 STATE_OFFLINE="offline"
 
 ONLINE_DUTY_CYCLE = 100
-IDLE_DUTY_CYCLE = DEFAULT_DUTY_CYCLE
+IDLE_DUTY_CYCLE = 50
 OFFLINE_DUTY_CYCLE = 0
 
 ONLINE_TIMEOUT=30
