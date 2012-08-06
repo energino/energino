@@ -59,6 +59,7 @@
 
 // Feed id
 const long FEED = 0;
+// Cosm key
 const char KEY[] = "-";
 
 // Cosm configuration
