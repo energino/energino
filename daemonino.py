@@ -318,7 +318,7 @@ class Listener(ThreadingMixIn, TCPServer):
     
     def __init__(self, host, feeds, port = DEFAULT_PORT, www_root = DEFAULT_WWW_ROOT):
         self.allow_reuse_address = True
-        self.www_root = www_root
+        self.www_root = os.path.abspath(www_root)
         self.feeds = feeds
         logging.info("hostname: %s" % host)
         logging.info("listening on port: %u" % port)
