@@ -7,12 +7,12 @@ google.setOnLoadCallback(initialize);
 var options = {
     width: 150,
     height: 150,
-    redFrom: 7,
-    redTo: 8,
-    yellowFrom: 6.5,
-    yellowTo: 7,
+    redFrom: 5,
+    redTo: 6,
+    yellowFrom: 4.5,
+    yellowTo: 5,
     min: 0,
-    max: 8,
+    max: 6,
 };
 
 var optionsDutyCycle = {
