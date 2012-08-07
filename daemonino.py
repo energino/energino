@@ -58,8 +58,8 @@ ONLINE_DUTY_CYCLE = 100
 IDLE_DUTY_CYCLE = 50
 OFFLINE_DUTY_CYCLE = 0
 
-ONLINE_TIMEOUT=30
-IDLE_TIMEOUT=45
+ONLINE_TIMEOUT=60
+IDLE_TIMEOUT=60
 TICK=1
 
 ALWAYS_ON=[]
@@ -413,7 +413,10 @@ class Daemonino(threading.Thread):
                     status = json.loads(res.read())
                     result['datastreams']['switch']['current_value'] = status[0]
                     if status[0] == 1:
-                        del result['datastreams']['duty_cycle']
+                        if 'duty_cycle' in result['datastreams']:
+                            del result['datastreams']['duty_cycle']
+                        if 'clients' in result['datastreams']:
+                            del result['datastreams']['clients']
         except HTTPError, e:
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
