@@ -401,7 +401,7 @@ class Daemonino(threading.Thread):
     def set_switch(self, result, state):
         try:
             if 'switch' in result['datastreams']:
-                switch = result['datafeedsstreams']['switch']['current_value']
+                switch = result['datastreams']['switch']['current_value']
                 url = None
                 if (state in [ STATE_ONLINE, STATE_IDLE ]) and (switch == '1'):
                     url = 'http://' + result['energino'] + ':8180/write/switch/0'
@@ -412,6 +412,8 @@ class Daemonino(threading.Thread):
                     res = urlopen(url, timeout=2)
                     status = json.loads(res.read())
                     result['datastreams']['switch']['current_value'] = status[0]
+                    if status[0] == 1:
+                        del result['datastreams']['duty_cycle']
         except HTTPError, e:
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
