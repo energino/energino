@@ -1,4 +1,4 @@
-H/*
+/*
  * EnerginoEthernet
  *
  * This sketch connects an Arduino equipped with the Energino 
@@ -15,10 +15,12 @@ H/*
  *  #K<key>, sets the COSM authentication key [default is -]
  *  #A<integer>, sets value of the R1 resistor in Kohm [default is 100]
  *  #B<integer>, sets value of the R2 resistor in Kohm [default is 10]
- *  #C<integer>, sets th offset in mV [default is 2500]
- *  #C<integer>, sets th sensitivity in mV [default is 850]
+ *  #C<integer>, sets the offset in mV [default is 2500]
+ *  #D<integer>, sets the sensitivity in mV [default is 850]
  *  #P<integer>, sets the period between two updates (in ms) [default is 2000]
- *  #R, resest the configuration to the defaults
+ *  #H, sets the remote server ip address [default is 216.52.233.121 (Cosm)]
+ *  #S, sets the remote server port [default is 80]
+ *  #R, resets the configuration to the defaults
  * No updates are sent if the feed id is set to 0
  *
  * Serial putput:
@@ -156,10 +158,10 @@ void setup() {
   Serial.begin(115200);   
   // Loading setting 
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
-  //if (strcmp(settings.magic, MAGIC) != 0) {
+  if (strcmp(settings.magic, MAGIC) != 0) {
     reset();
     eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
-  //}
+  }
   // Print hw address
   char macstr[18];
   snprintf(macstr, 18, "%02x:%02x:%02x:%02x:%02x:%02x", settings.mac[0], settings.mac[1], settings.mac[2], settings.mac[3], settings.mac[4], settings.mac[5]);
@@ -214,7 +216,7 @@ void serParseCommand()
       else if (i == 1) {
         cmd = chr;
       }
-#      else{
+      else{
         inputBytes[i-2] = chr;
       }
     }
