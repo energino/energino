@@ -207,7 +207,7 @@ void loop() {
   // Conversion
   float VFinal = scaleVoltage((float)VRaw/sleep);
   float IFinal = scaleCurrent((float)IRaw/sleep);
-  
+
   // Control loop
   long delta = abs(millis() - started);
   sleep -= 5 * (delta - targetSleep);

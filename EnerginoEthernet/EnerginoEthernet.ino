@@ -66,10 +66,6 @@ const char KEY[] = "-";
 IPAddress HOST(216,52,233,121);
 const long PORT = 80;
 
-// Assign a MAC address for the ethernet controller.
-byte MAC[] = { 
-  0x90, 0xA2, 0xDA, 0x0D, 0x1D, 0x95 };
-  
 // This configuration is used when DHCP fails
 IPAddress IP(172,25,18,219);
 IPAddress MASK(255,255,255,0);
@@ -107,6 +103,7 @@ const int REVISION = 0;
 // Permanent configuration
 struct settings_t {
   char magic[17];
+  byte mac[6];
   char apikey[49];
   long period;
   int r1;
@@ -137,6 +134,13 @@ void reset() {
   settings.host = HOST;
   settings.port = PORT;
   strcpy (settings.apikey,KEY);  
+  randomSeed(analogRead(0));
+  settings.mac[0] = 0x90;
+  settings.mac[1] = 0xA2;
+  settings.mac[2] = 0xDA;
+  for (int i = 3; i < 6; i++) {
+    settings.mac[i] = random(0, 255);
+  }
 }
 
 void setup() {
@@ -149,16 +153,21 @@ void setup() {
   Serial.begin(115200);   
   // Loading setting 
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
-  if (strcmp(settings.magic, MAGIC) != 0) {
+  //if (strcmp(settings.magic, MAGIC) != 0) {
     reset();
     eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
-  }
+  //}
+  // Print hw address
+  char macstr[18];
+  snprintf(macstr, 18, "%02x:%02x:%02x:%02x:%02x:%02x", settings.mac[0], settings.mac[1], settings.mac[2], settings.mac[3], settings.mac[4], settings.mac[5]);
+  DBG Serial.print("HWAddr: ");
+  DBG Serial.println(macstr);
   // Try to configure the ethernet using DHCP
   DBG Serial.println("Running DHCP.");
-  if (Ethernet.begin(MAC) == 0) {
+  if (Ethernet.begin(settings.mac) == 0) {
     DBG Serial.println("DHCP failed, using static IP.");
     // Use static IP
-    Ethernet.begin(MAC, IP, MASK, GW);
+    Ethernet.begin(settings.mac, IP, MASK, GW);
   }
   // Give the Ethernet shield a second to initialize:
   delay(1000);
