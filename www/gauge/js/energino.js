@@ -54,9 +54,6 @@ function refresh() {
         success: function (data) {
             plot(data)
         },
-        error: function () {
-            alert('boo!');
-        },
         beforeSend: setHeader
     });
     function setHeader(xhr) {
@@ -80,7 +77,7 @@ function plot(data) {
             } else {
                 var energino = "n.a."
             }
-            document.getElementById('feeds').innerHTML += '<tr><td><p class="head">Feed: ' + id + '</p><p class="details">Node: ' + title + '<br />Energino: ' + energino + '<br />Dispatcher: ' + dispatcher + '</p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td><p>Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p>Node: ' + title + '<br />Energino: <a href="http://'+energino+':8180/read/datastreams">' + energino + '</a><br />Dispatcher: ' + dispatcher + '</p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {

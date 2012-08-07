@@ -4,29 +4,8 @@
 	font-family: sans;
 }
 
-#feeds td {
-	padding: 4px;
-	font-family: sans;
-}
-
-#feeds th.header_left {
-	padding: 4px;
-	text-align: left;
-	font-family: sans;
-	font-size: 12pt;
-}
-
-#feeds th {
-	padding: 4px;
-	font-family: sans;
-	font-size: 12pt;
-}
-
 .chart {
-	width: 50%; 
+	width: 55%; 
 	margin: 0 auto;
 }
 
-.details {
-	font-size: 10pt;
-}

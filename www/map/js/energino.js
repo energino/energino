@@ -63,9 +63,6 @@ function trigger(feed, relay) {
             success: function () {
                 refresh();
             },
-            error: function () {
-		alert('boo');
-            },
             beforeSend: setHeader
         });
     };
@@ -83,7 +80,6 @@ function refresh() {
         success: function(data) { 
             plot(data)
         },
-        error: function() { alert('boo!'); },
         beforeSend: setHeader
     });
     function setHeader(xhr) {
@@ -118,6 +114,7 @@ function plot(data) {
         bounds.extend(latLng)
         if (relay == "1") {
             relay = "0"
+            dutyCycle = "0"
             var image = new google.maps.MarkerImage('images/dd-start.png', new google.maps.Size(20, 34), new google.maps.Point(0, 0), new google.maps.Point(10, 34))
         } else if (relay == 0) {
             relay = "1"
