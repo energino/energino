@@ -327,14 +327,18 @@ class Listener(ThreadingMixIn, TCPServer):
 
 class Daemonino(threading.Thread):
     
-    def __init__(self, feeds, autonomic):
+    def __init__(self, feeds, autonomic, nb_default_feeds):
         super(Daemonino, self).__init__()
         self.feeds = feeds
         self.autonomic = autonomic
         self.daemon = True
         self.stop = threading.Event()
         self.state = {}
-  
+        for _ in range(nb_default_feeds):
+            res = feeds.post({'version': '1.0.0', 'title': 'My feed'})
+            if res[0] == 201:
+                logging.info("added feed %u" % res[1])
+            
     def get_tot_num_clients(self):
         tot_clients = 0
         feeds = self.feeds.get('')
@@ -397,7 +401,7 @@ class Daemonino(threading.Thread):
     def set_switch(self, result, state):
         try:
             if 'switch' in result['datastreams']:
-                switch = result['datastreams']['switch']['current_value']
+                switch = result['datafeedsstreams']['switch']['current_value']
                 url = None
                 if (state in [ STATE_ONLINE, STATE_IDLE ]) and (switch == '1'):
                     url = 'http://' + result['energino'] + ':8180/write/switch/0'
@@ -463,6 +467,7 @@ if __name__ == "__main__":
     p.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
     p.add_option('--www', '-w', dest="www", default=DEFAULT_WWW_ROOT)
     p.add_option('--log', '-l', dest="log")
+    p.add_option('--feeds', '-f', dest="feeds", default=0)
     p.add_option('--autonomic', '-a', action="store_true", dest="autonomic", default=False)    
     options, arguments = p.parse_args()
 
@@ -471,7 +476,7 @@ if __name__ == "__main__":
     host = socket.gethostbyname(socket.gethostname())
     feeds = Feeds(host, int(options.port))
     
-    daemonino = Daemonino(feeds, options.autonomic)
+    daemonino = Daemonino(feeds, options.autonomic, int(options.feeds))
     daemonino.start()
     
     listener = Listener(host, feeds, int(options.port), options.www)
