@@ -77,13 +77,14 @@ function plot(data) {
             } else {
                 var energino = "n.a."
             }
-            document.getElementById('feeds').innerHTML += '<tr><td><p>Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p>Node: ' + title + '<br />Energino: <a href="http://'+energino+':8180/read/datastreams">' + energino + '</a><br />Dispatcher: ' + dispatcher + '</p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td><p>Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p>Node: ' + title + '<br />Energino: <a href="http://'+energino+':8180/read/datastreams">' + energino + '</a><br />Dispatcher: ' + dispatcher + '<br />Clients: <span id="chart_clients_'+id+'">n.a.</span></p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {
         var id = data['results'][node]['id']
         var amperes = "0.0"
         var dutyCycle = "0.0"
+        var nbClients = "n.a."
         for (datastream in data['results'][node]['datastreams']) {
             if (data['results'][node]['datastreams'][datastream]['id'] == 'watts') {
                 amperes = data['results'][node]['datastreams'][datastream]['current_value']
@@ -91,7 +92,11 @@ function plot(data) {
             if (data['results'][node]['datastreams'][datastream]['id'] == 'duty_cycle') {
                 dutyCycle = data['results'][node]['datastreams'][datastream]['current_value']
             }
+            if (data['results'][node]['datastreams'][datastream]['id'] == 'clients') {
+                nbClients = data['results'][node]['datastreams'][datastream]['current_value']
+            }
         }
+	document.getElementById("chart_clients_" + id).innerHTML = nbClients
 	if (parseFloat(amperes) < 0) {
 		amperes = "0.0"
         }
