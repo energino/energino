@@ -1,4 +1,4 @@
-/*
+H/*
  * EnerginoEthernet
  *
  * This sketch connects an Arduino equipped with the Energino 
@@ -27,14 +27,17 @@
  * RESTful interface: 
  *  This sketch accepts HTTP requests in the form GET /<cmd>/<param>/[value], where "cmd" 
  *  can be either "read" or "write", param is one of the following parameters:
- *   Datastreams [read]
- *   Switch [read|write]
- *  Example: GET http://<ipaddress>/read/Datastreams
+ *   datastreams [read]
+ *   switch [read|write]
+ *  Examples: 
+ *   GET http://<ipaddress>/read/datastreams
+ *   GET http://<ipaddress>/write/switch/0
+ *   GET http://<ipaddress>/write/switch/1
  *
  * created 24 May 2012
  * by Roberto Riggio
  *
- * This code is release under the BSD Licence
+ * This code is released under the BSD Licence
  *
  */
 
@@ -211,7 +214,7 @@ void serParseCommand()
       else if (i == 1) {
         cmd = chr;
       }
-      else{
+#      else{
         inputBytes[i-2] = chr;
       }
     }
