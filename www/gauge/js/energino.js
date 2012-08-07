@@ -5,8 +5,8 @@ google.load('visualization', '1', {
 google.setOnLoadCallback(initialize);
 
 var options = {
-    width: 150,
-    height: 150,
+    width: 175,
+    height: 175,
     redFrom: 5,
     redTo: 6,
     yellowFrom: 4.5,
@@ -16,8 +16,8 @@ var options = {
 };
 
 var optionsDutyCycle = {
-    width: 150,
-    height: 150,
+    width: 175,
+    height: 175,
     min: 0,
     max: 100,
 };
@@ -66,18 +66,7 @@ function plot(data) {
     if (len == 0) {
         for (node in data['results']) {
             var id = data['results'][node]['id']
-            var title = data['results'][node]['title']
-            if ('dispatcher' in data['results'][node]) {
-                var dispatcher = data['results'][node]['dispatcher']
-            } else {
-                var dispatcher = "n.a."
-            }
-            if ('energino' in data['results'][node]) {
-                var energino = data['results'][node]['energino']
-            } else {
-                var energino = "n.a."
-            }
-            document.getElementById('feeds').innerHTML += '<tr><td><p>Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p>Node: ' + title + '<br />Energino: <a href="http://'+energino+':8180/read/datastreams">' + energino + '</a><br />Dispatcher: ' + dispatcher + '<br />Clients: <span id="chart_clients_'+id+'">n.a.</span></p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td><p>Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p>Node: <span id="chart_title_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Clients: <span id="chart_clients_'+id+'">n.a.</span></p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {
@@ -85,6 +74,18 @@ function plot(data) {
         var amperes = "0.0"
         var dutyCycle = "0.0"
         var nbClients = "n.a."
+        var energino = "n.a."
+        var title = "n.a."
+        var dispatcher = "n.a."
+        if ('dispatcher' in data['results'][node]) {
+            dispatcher = data['results'][node]['dispatcher']
+        } 
+        if ('title' in data['results'][node]) {
+            title = data['results'][node]['title']
+        } 
+        if ('energino' in data['results'][node]) {
+            energino = data['results'][node]['energino']
+        } 
         for (datastream in data['results'][node]['datastreams']) {
             if (data['results'][node]['datastreams'][datastream]['id'] == 'watts') {
                 amperes = data['results'][node]['datastreams'][datastream]['current_value']
@@ -96,7 +97,11 @@ function plot(data) {
                 nbClients = data['results'][node]['datastreams'][datastream]['current_value']
             }
         }
+	var aLink = '<a href="http://'+energino+':8180/read/datastreams">' + energino + '</a>'
+	document.getElementById("chart_energino_" + id).innerHTML = aLink
+	document.getElementById("chart_title_" + id).innerHTML = title
 	document.getElementById("chart_clients_" + id).innerHTML = nbClients
+	document.getElementById("chart_dispatcher_" + id).innerHTML = dispatcher
 	if (parseFloat(amperes) < 0) {
 		amperes = "0.0"
         }
