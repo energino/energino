@@ -451,9 +451,11 @@ class Daemonino(threading.Thread):
             logging.exception("Exception:")        
 
     def shutdown(self):
+        logging.info("Stopping daemonino...")
         self.stop.set()
                     
 def sigint_handler(signal, frame):
+    logging.info("Received SIGINT, terminating...")
     listener.socket.shutdown(SHUT_RDWR)
     listener.socket.close()
     daemonino.shutdown()
