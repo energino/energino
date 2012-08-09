@@ -225,7 +225,7 @@ class Feeds(object):
             result = { 'results' : self.__feeds.values(), 'totalResults' : len(self.__feeds), 'startIndex' : 0, 'itemsPerPage' : 100 }
             return (200, result)
         elif int(feed[0]) in self.__feeds:
-            results =  JSONMerge({}).merge(self.__feeds[int(feed[0])]) 
+            results = JSONMerge({}).merge(self.__feeds[int(feed[0])]) 
             last = datetime.strptime(results['updated'], "%Y-%m-%dT%H:%M:%S.%fZ")
             now = datetime.now()
             delta = timedelta(seconds=30)
@@ -260,7 +260,6 @@ class Feeds(object):
                     return (401, '')
         
                 # update address
-
                 if agent == MODEL_ENERGINO_ETHERNET:
                     self.__feeds[int(feed[0])]['energino'] = address
                 else:    
