@@ -413,18 +413,18 @@ char * getDatastreams() {
   float v = getVoltage(A1, settings.r1, settings.r2);
   strcpy (buffer,"{\"version\":\"1.0.0\",");
   strcat (buffer,"\"datastreams\":[");
-  strcat (buffer,"{\"id\":\"current\",\"current_value\":\"");
+  strcat (buffer,"{\"id\":\"current\",\"current_value\":");
   strcat (buffer,dtostrf (i, 5, 3, r));
-  strcat (buffer,"\"},");
-  strcat (buffer,"{\"id\":\"voltage\",\"current_value\":\"");
+  strcat (buffer,"},");
+  strcat (buffer,"{\"id\":\"voltage\",\"current_value\":");
   strcat (buffer,dtostrf (v, 5, 3, r));
-  strcat (buffer,"\"},");
-  strcat (buffer,"{\"id\":\"watts\",\"current_value\":\"");
+  strcat (buffer,"},");
+  strcat (buffer,"{\"id\":\"watts\",\"current_value\":");
   strcat (buffer,dtostrf (v * i, 5, 3, r));
-  strcat (buffer,"\"},");
-  strcat (buffer,"{\"id\":\"switch\", \"current_value\":\"");
+  strcat (buffer,"},");
+  strcat (buffer,"{\"id\":\"switch\", \"current_value\":");
   strcat (buffer,itoa(digitalRead(RELAY_PIN),r,10));
-  strcat (buffer,"\"}");
+  strcat (buffer,"}");
   strcat (buffer,"]}");
   // Print data also on the serial
   Serial.print("#");
