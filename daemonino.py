@@ -357,10 +357,10 @@ class Daemonino(threading.Thread):
             if not self.autonomic:
                 time.sleep(TICK)
                 continue
-            tot_clients = self.get_tot_num_clients()
-            if tot_clients >= 4:
+            nb_clients = self.get_tot_num_clients()
+            if nb_clients >= 4:
                 ALWAYS_ON = [ 1, 2, 3 ]
-            elif tot_clients >= 2:
+            elif nb_clients >= 2:
                 ALWAYS_ON = [ 2, 3 ]
             else:
                 ALWAYS_ON = [ 3 ]
@@ -375,7 +375,6 @@ class Daemonino(threading.Thread):
                     self.state[id_feed ] = { 'state' :  STATE_ONLINE, 'counter' : 0 }
                 if "clients" in result['datastreams']:
                     clients = result['datastreams']['clients']['current_value']
-                    tot_clients = tot_clients + clients
                     if clients == 0:
                         if self.state[id_feed]['state'] != STATE_OFFLINE:
                             self.state[id_feed]['counter'] = self.state[id_feed]['counter'] + 1
@@ -402,9 +401,10 @@ class Daemonino(threading.Thread):
             if 'switch' in result['datastreams']:
                 switch = result['datastreams']['switch']['current_value']
                 url = None
-                if (state in [ STATE_ONLINE, STATE_IDLE ]) and (switch == '1'):
+                if (state in [ STATE_ONLINE, STATE_IDLE ]) and (switch == 1):
                     url = 'http://' + result['energino'] + ':8180/write/switch/0'
-                if (state in [ STATE_OFFLINE ]) and (switch == '0'):
+
+                if (state in [ STATE_OFFLINE ]) and (switch == 0):
                     url = 'http://' + result['energino'] + ':8180/write/switch/1'
                 if url != None:
                     logging.info("opening url %s" % url)
@@ -413,9 +413,9 @@ class Daemonino(threading.Thread):
                     result['datastreams']['switch']['current_value'] = status[0]
                     if status[0] == 1:
                         if 'duty_cycle' in result['datastreams']:
-                            del result['datastreams']['duty_cycle']
+                            result['datastreams']['duty_cycle']['current_value'] = 0
                         if 'clients' in result['datastreams']:
-                            del result['datastreams']['clients']
+                            result['datastreams']['clients']['current_value'] = 0
         except HTTPError, e:
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
