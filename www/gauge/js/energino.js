@@ -1,6 +1,4 @@
-google.load('visualization', '1', {
-    packages: ['gauge']
-});
+google.load('visualization', '1', {packages: ['gauge']});
 
 google.setOnLoadCallback(initialize);
 
@@ -66,7 +64,7 @@ function plot(data) {
     if (len == 0) {
         for (node in data['results']) {
             var id = data['results'][node]['id']
-            document.getElementById('feeds').innerHTML += '<tr><td><p>Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p>Node: <span id="chart_title_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Clients: <span id="chart_clients_'+id+'">n.a.</span></p></td><td><div class="chart" id="chart' + id + '"></div></td><td><div class="chart" id="chart_dc' + id + '"></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p class="info">Node: <span id="chart_title_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Clients: <span id="chart_clients_'+id+'">n.a.</span></p></td><td><div id="chart' + id + '"></div></td><td><div id="chart_dc' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {
@@ -113,16 +111,17 @@ function plot(data) {
             ['Label', 'Value'],
             ['Duty [%]', parseFloat(dutyCycle)]
         ]);
-        var chart = new google.visualization.Gauge(document.getElementById("chart" + id));
-        var chartDutyCycle = new google.visualization.Gauge(document.getElementById("chart_dc" + id));
-        if (id in gaugesDict) {
-            gaugesDict[id].draw(table, options);
-            gaugesDutyCycleDict[id].draw(tableDutyCycle, optionsDutyCycle);
-        } else {
-            chart.draw(table, options);
-            gaugesDict[id] = chart
-            chartDutyCycle.draw(tableDutyCycle, optionsDutyCycle);
-            gaugesDutyCycleDict[id] = chartDutyCycle
+
+        if (!(id in gaugesDict)) {
+            gaugesDict[id] = new google.visualization.Gauge(document.getElementById("chart" + id));
         }
+
+        if (!(id in gaugesDutyCycleDict)) {
+            gaugesDutyCycleDict[id] = new google.visualization.Gauge(document.getElementById("chart_dc" + id));
+        }
+
+        gaugesDict[id].draw(table, options);
+        gaugesDutyCycleDict[id].draw(tableDutyCycle, optionsDutyCycle);
+
     }
 }
