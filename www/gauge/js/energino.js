@@ -64,7 +64,7 @@ function plot(data) {
     if (len == 0) {
         for (node in data['results']) {
             var id = data['results'][node]['id']
-            document.getElementById('feeds').innerHTML += '<tr><td><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p class="info">Node: <span id="chart_title_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Clients: <span id="chart_clients_'+id+'">n.a.</span></p></td><td><div id="chart' + id + '"></div></td><td><div id="chart_dc' + id + '"></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td width="15%"><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p class="info">Node: <span id="chart_title_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span></td><td width="5%"><p class="clients"><span id="chart_clients_'+id+'">n.a.</span></p></div></td><td width="20%"><div class="charts" id="chart' + id + '"></div></td><td width="20%"><div class="charts" id="chart_dc' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {

@@ -22,7 +22,7 @@ var createRingBuffer = function(length) {
 };
 
 var options = {
-    width: 400,
+    width: 380,
     height: 160,
     hAxis : { 'title' : 'Time [s]' },
     vAxis : { 'title' : 'Power [W]', 'maxValue' : 8, 'minValue' : 0 },
@@ -30,7 +30,7 @@ var options = {
 };
 
 var optionsDutyCycle = {
-    width: 400,
+    width: 380,
     height: 160,
     hAxis : { 'title' : 'Time [s]' },
     vAxis : { 'title' : 'Duty Cycle [%]', 'maxValue' : 110, 'minValue' : 0  },
@@ -90,13 +90,13 @@ function plot(data) {
     if (len == 0) {
         for (node in data['results']) {
             var id = data['results'][node]['id']
-            document.getElementById('feeds').innerHTML += '<tr><td width="16%"><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p class="info">Node: <span id="chart_title_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Clients: <span id="chart_clients_'+id+'">n.a.</span></p></td width="42%"><td><div id="chart_' + id + '"></div></td><td width="42%"><div id="chart_duty_cyle_' + id + '"></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td width="15%"><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p class="info">Node: <span id="chart_title_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span></p></td width="40%"><td width="5%"><p class="clients"><span id="chart_clients_'+id+'">n.a.</span></p></div></td><td><div class="charts" id="chart_' + id + '"></div></td><td width="40%"><div class="charts" id="chart_duty_cyle_' + id + '"></div></td></tr>';
         }
     }
     for (node in data['results']) {
         var id = data['results'][node]['id']
         var amperes = 0.0
-        var dutyCycle = 100
+        var dutyCycle = 0
         var nbClients = 0
         var energino = "n.a."
         var title = "n.a."

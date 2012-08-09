@@ -4,6 +4,15 @@
 	font-family: sans;
 }
 
+td {
+	text-align: center
+}
+
+.clients {
+	font-family: sans;
+	font-size: 42pt;
+}
+
 .info {
 	font-family: sans;
 	font-size: 8pt;
