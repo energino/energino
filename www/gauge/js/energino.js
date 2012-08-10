@@ -3,8 +3,8 @@ google.load('visualization', '1', {packages: ['gauge']});
 google.setOnLoadCallback(initialize);
 
 var options = {
-    width: 175,
-    height: 175,
+    width: 165,
+    height: 165,
     redFrom: 5,
     redTo: 6,
     yellowFrom: 4.5,
@@ -14,8 +14,8 @@ var options = {
 };
 
 var optionsDutyCycle = {
-    width: 175,
-    height: 175,
+    width: 165,
+    height: 165,
     min: 0,
     max: 100,
 };
