@@ -45,6 +45,7 @@ DEFAULT_INTERVAL = 2000
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
 def unpack_serial(line):
+    logging.debug("line: %s" % line)
     if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
         readings = line[1:-1].split(",")
         if len(readings) == 8:
@@ -57,6 +58,7 @@ def unpack_serial(line):
     raise Exception, "invalid line: %s" % line[0:-1]
 
 def unpack_ethernet(line):
+    logging.debug("line: %s" % line)
     if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
         readings = line[1:-1].split(",")
         if len(readings) == 14:
@@ -113,6 +115,7 @@ class PyEnergino(object):
         logging.debug("sending initialization sequence %s" % cmd)
         self.write(cmd + '\n')
         time.sleep(2)
+        self.unpack(self.ser.readline())
 
     def send_cmds(self, cmds):
         for cmd in cmds:           
@@ -120,6 +123,7 @@ class PyEnergino(object):
                 
     def configure(self):
         line = self.ser.readline()
+        logging.debug("line: %s" % line)
         if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
             readings = line[1:-1].split(",")
             if readings[0] in MODELS.keys():
