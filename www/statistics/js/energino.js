@@ -160,6 +160,12 @@ function plot(data) {
             statsDutyCycleDict[id] = new google.visualization.LineChart(document.getElementById('chart_duty_cyle_' + id));
         }
 
+	var max = Math.max.apply(Math, dataDutyCycleDict[id].toArray());
+	var min = Math.min.apply(Math, dataDutyCycleDict[id].toArray());
+
+	options.vAxis.maxValue = max * 1.1
+	options.vAxis.minValue = min * 0.9
+
         statsDict[id].draw(dataStruct, options);
         statsDutyCycleDict[id].draw(dataDutyCycleStruct, optionsDutyCycle);
 
