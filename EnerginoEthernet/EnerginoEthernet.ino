@@ -33,6 +33,7 @@
  *   switch [read|write]
  *  Examples: 
  *   GET http://<ipaddress>/read/datastreams
+ *   GET http://<ipaddress>/read/switch
  *   GET http://<ipaddress>/write/switch/0
  *   GET http://<ipaddress>/write/switch/1
  *
@@ -53,7 +54,7 @@
 
 #define RELAY_PIN 2
 
-#define STRING_BUFFER_SIZE 400
+#define STRING_BUFFER_SIZE 300
 #define SAMPLES 100
 
 #ifdef DEBUG
@@ -122,7 +123,6 @@ struct settings_t {
 settings;
 
 // working vars
-EthernetClient client;
 EthernetServer server(SERVER_PORT);
 
 long lastConnectionTime = 0; 
@@ -183,11 +183,9 @@ void setup() {
 void loop() {
   // If we're not connected, and a full period has passed since
   // our connection, then connect again and send data.
-  if(!client.connected() && (millis() - lastConnectionTime > settings.period)) {
+  if(millis() - lastConnectionTime > settings.period) {
     sendData();
-  } else {
-    client.stop();
-  }
+  } 
   // Parse incoming commands
   serParseCommand();
   // Listen for incoming requests
@@ -198,7 +196,8 @@ void serParseCommand()
 {
   char cmd = '\0';
   int i, serAva;
-  char inputBytes[60] = { '\0' };
+  char inputBytes[60] = { 
+    '\0'   };
   char * inputBytesPtr = &inputBytes[0];
   if (Serial.available() > 0) {
     delay(5);
@@ -215,7 +214,7 @@ void serParseCommand()
       } 
       else if (i == 1) {
         cmd = chr;
-      }
+      } 
       else{
         inputBytes[i-2] = chr;
       }
@@ -233,27 +232,32 @@ void serParseCommand()
     if (value > 0) {
       settings.period = value;
     }
-  } else if (cmd == 'A') {
+  } 
+  else if (cmd == 'A') {
     int value = atoi(inputBytesPtr);
     if (value >= 0) {
       settings.r1 = value;
     }
-  } else if (cmd == 'B') {
+  } 
+  else if (cmd == 'B') {
     int value = atoi(inputBytesPtr);
     if (value >= 0) {
       settings.r2 = value;
     }
-  } else if (cmd == 'C') {
+  } 
+  else if (cmd == 'C') {
     int value = atoi(inputBytesPtr);
     if (value >= 0) {
       settings.offset = value;
     }
-  } else if (cmd == 'D') {
+  } 
+  else if (cmd == 'D') {
     int value = atoi(inputBytesPtr);
     if (value >= 0) {
       settings.sensitivity = value;
     }
-  } else if (cmd == 'K') {
+  } 
+  else if (cmd == 'K') {
     strncpy(settings.apikey, inputBytes,49);
     settings.apikey[48] = '\0';
   }
@@ -261,8 +265,8 @@ void serParseCommand()
     byte host[4];
     char *p = strtok(inputBytes, ".");  
     for (int i = 0; i < 4; i++) {
-        host[i] = atoi(p);
-        p = strtok(NULL, ".");
+      host[i] = atoi(p);
+      p = strtok(NULL, ".");
     }
     IPAddress hostIP = IPAddress(host);
     DBG Serial.print("New host ip address: ");
@@ -368,9 +372,15 @@ void sendContent(EthernetClient &request, char *value) {
 void sendData() {
   // poll energino
   char *json = getDatastreams();
-  // if there's a successful connection:
+  // check if the feed has been initialized
+  if (settings.feed == 0) {
+    lastConnectionTime = millis();
+    return;
+  }
+  // try to connect
   DBG Serial.println("Connecting.");
-  if ((settings.feed != 0) && client.connect(settings.host, settings.port)) {
+  EthernetClient client;    
+  if (client.connect(settings.host, settings.port)) {
     DBG Serial.println("connected.");
     DBG Serial.print("PUT /v2/feeds/");
     DBG Serial.println(settings.feed);
@@ -378,7 +388,6 @@ void sendData() {
     client.print("PUT /v2/feeds/");
     client.print(settings.feed);
     client.print(" HTTP/1.1\n");
-    client.println("Host: api.cosm.com");
     client.print("X-PachubeApiKey: ");
     client.println(settings.apikey);
     client.print("User-Agent: ");
@@ -403,7 +412,6 @@ void sendData() {
   else {
     // if you couldn't make a connection:
     DBG Serial.println("Unable to connect.");
-    client.stop();
   }
   lastConnectionTime = millis();
 }
