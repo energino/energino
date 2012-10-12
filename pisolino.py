@@ -72,11 +72,16 @@ class ListenerHandler(SimpleHTTPRequestHandler):
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps( [ ap.getClients() ] ) + '\n')
-            elif tokens[1] ==  'duty_cycle':
+            elif tokens[1] == 'duty_cycle':
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps( [ ap.getDutyCycle(), ap.getDutyCycleWindow() ] ) + '\n')
+                self.wfile.write(json.dumps( [ ap.getDutyCycle() ] ) + '\n')
+            elif tokens[1] == 'duty_cycle_window':
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps( [ ap.getDutyCycleWindow() ] ) + '\n')
             else:
                 self.send_error(404)
         else:
@@ -114,17 +119,14 @@ class Listener(ThreadingMixIn, TCPServer):
         logging.info("RESTful interface listening on port: %u" % port)
         TCPServer.__init__(self, ("", port), ListenerHandler)
 
-
 class Command(object):
 
     def __init__(self, cmd):
         self.cmd = cmd
 
     def run(self):
-        
         self.process = Popen(self.cmd, shell=False, stdout=PIPE, stderr=PIPE, close_fds=True)
         (self.stdout, self.stderr) = self.process.communicate()
-
         return self.process.returncode   
 
 class AccessPoint(threading.Thread):
@@ -226,7 +228,6 @@ class Pisolino(Dispatcher):
                 time.sleep(BACKOFF)
         # thread stopped
         logging.info("thread %s stopped" % self.__class__.__name__) 
-
        
 def sigint_handler(signal, frame):
     pisolino.shutdown()
