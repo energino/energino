@@ -403,7 +403,6 @@ class Daemonino(threading.Thread):
                 url = None
                 if (state in [ STATE_ONLINE, STATE_IDLE ]) and (switch == 1):
                     url = 'http://' + result['energino'] + ':8180/write/switch/0'
-
                 if (state in [ STATE_OFFLINE ]) and (switch == 0):
                     url = 'http://' + result['energino'] + ':8180/write/switch/1'
                 if url != None:
@@ -414,6 +413,11 @@ class Daemonino(threading.Thread):
                     if status[0] == 1:
                         if 'duty_cycle' in result['datastreams']:
                             result['datastreams']['duty_cycle']['current_value'] = 0
+                        if 'clients' in result['datastreams']:
+                            result['datastreams']['clients']['current_value'] = 0
+                    if status[0] == 0:
+                        if 'duty_cycle' in result['datastreams']:
+                            result['datastreams']['duty_cycle']['current_value'] = 100
                         if 'clients' in result['datastreams']:
                             result['datastreams']['clients']['current_value'] = 0
         except HTTPError, e:
