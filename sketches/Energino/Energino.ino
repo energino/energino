@@ -19,7 +19,7 @@
  *  #R, resest the configuration to the defaults
  *
  * Serial putput:
- *   #Energino,0,<voltage>,<current>,<power>,<switch>,<samples>,<period>
+ *   #Energino,0,<voltage>,<current>,<power>,<relay>,<samples>,<period>
  *
  * created 24 May 2012
  * by Roberto Riggio
