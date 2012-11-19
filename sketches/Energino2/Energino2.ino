@@ -54,7 +54,7 @@
 #include <avr/eeprom.h>
 
 // comment/uncomment to disable/enable debug
-#define DEBUG
+//#define DEBUG
 
 #define RELAY_PIN 3
 #define STRING_BUFFER_SIZE 300
@@ -164,13 +164,14 @@ void reset() {
 }
 
 void setup() {
+  // Set serial port
+  Serial.begin(115200);   
   // Default on
   pinMode(RELAY_PIN,OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
   pinMode(13,OUTPUT);
   digitalWrite(13, LOW);
   // configuring serial
-  Serial.begin(115200);   
   // Loading setting 
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
   if (strcmp(settings.magic, MAGIC) != 0) {
@@ -185,12 +186,16 @@ void setup() {
   DBG Serial.print("HWAddr: ");
   DBG Serial.println(macstr);
   // Try to configure the ethernet using DHCP
+  delay(2000);
   DBG Serial.println("Running DHCP...");
   if (Ethernet.begin(settings.mac) == 0) {
     DBG Serial.println("DHCP failed, using static IP.");
     // Use static IP
     Ethernet.begin(settings.mac, IP, MASK, GW);
   }
+  // Print IP
+  DBG Serial.print("IPAddr: ");
+  DBG Serial.println(Ethernet.localIP());
   // Give the Ethernet shield a second to initialize:
   delay(1000);
   // Start server
@@ -232,6 +237,9 @@ void loop() {
 
   // send data to remote host
   sendData();
+
+  // dump to serial
+  dumpToSerial();
 
   // Control loop
   delta = abs(millis() - started);
@@ -364,17 +372,18 @@ void handleRequests() {
       // If you've gotten to the end of the line (received a newline
       // character) the http request has ended, so you can send a reply
       if (c == '\n' || idx >= STRING_BUFFER_SIZE) {
-        char method [5];
-        char url [20];
-        sscanf (buffer,"%s /%s/%s/%d",method,url);
+        //char method [5];
+        char * method;
+        method = strtok (buffer, " ");
         if (strcmp(method, "GET") == 0) {
           char * toks;
-          toks = strtok (url,"/");
+          toks = strtok (NULL," ");
+          toks = strtok (toks,"/");
           if (strcmp(toks, "read") == 0) {
             toks = strtok (NULL, "/");
             if (strcmp(toks, "datastreams") == 0) {
               DBG Serial.println("Sending full datastream");
-              sendContent(request,getDatastreams());
+              sendContent(request,getDatastream());
               break;
             } 
             else if (strcmp(toks, "switch") == 0) {
@@ -416,22 +425,8 @@ void handleRequests() {
   }
 }
 
-void sendContent(EthernetClient &request, long value) {
-  request.println(JSON_RESPONSE_BEGIN);
-  request.print(value);
-  request.print(JSON_RESPONSE_END);
-}
-
-void sendContent(EthernetClient &request, char *value) {
-  request.println(JSON_RESPONSE_BEGIN);
-  request.print(value);
-  request.print(JSON_RESPONSE_END);
-}
-
 // this method makes a HTTP connection to the server
 void sendData() {
-  // poll energino
-  char *json = getDatastreams();
   // check if the feed has been initialized
   if (settings.feed == 0) {
     return;
@@ -439,7 +434,10 @@ void sendData() {
   // try to connect
   DBG Serial.println("Connecting.");
   EthernetClient client;    
-  if (client.connect(settings.host, settings.port)) {
+  int ret = client.connect(settings.host, settings.port);
+  if (ret == 1) {
+    // build json document
+    char *json = getDatastream();
     DBG Serial.println("connected.");
     DBG Serial.print("PUT /v2/feeds/");
     DBG Serial.println(settings.feed);
@@ -452,8 +450,7 @@ void sendData() {
     client.print("User-Agent: ");
     client.println(MAGIC);    
     client.print("Content-Length: ");
-    client.print(strlen(json));
-    client.print("\n");
+    client.println(strlen(json));
     client.print("Content-Type: application/json\n");
     client.print("\n");
     // here's the actual content of the PUT request:
@@ -474,7 +471,19 @@ void sendData() {
   }
 }
 
-char * getDatastreams() {
+void sendContent(EthernetClient &request, long value) {
+  request.println(JSON_RESPONSE_BEGIN);
+  request.print(value);
+  request.print(JSON_RESPONSE_END);
+}
+
+void sendContent(EthernetClient &request, char *value) {
+  request.println(JSON_RESPONSE_BEGIN);
+  request.print(value);
+  request.print(JSON_RESPONSE_END);
+}
+
+char * getDatastream() {
   strcpy (buffer,"{\"version\":\"1.0.0\",");
   strcat (buffer,"\"datastreams\":[");
   strcat (buffer,"{\"id\":\"current\",\"current_value\":");
@@ -490,6 +499,9 @@ char * getDatastreams() {
   strcat (buffer,itoa(digitalRead(RELAY_PIN),r,10));
   strcat (buffer,"}");
   strcat (buffer,"]}");
+}
+
+void dumpToSerial() {
   // Print data also on the serial
   Serial.print("#");
   Serial.print(MAGIC);
@@ -526,7 +538,7 @@ char * getDatastreams() {
   Serial.print(",");
   Serial.print(settings.apikey);
   Serial.print("\n");  
-  return buffer;
+
 }
 
 float scaleVoltage(float VRaw) {
