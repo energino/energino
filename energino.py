@@ -44,20 +44,7 @@ DEFAULT_PORT_SPEED = 115200
 DEFAULT_INTERVAL = 2000
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
-def unpack_serial(line):
-    logging.debug("line: %s" % line.replace('\n',''))
-    if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
-        readings = line[1:-1].split(",")
-        if len(readings) == 8:
-            return { 'voltage' : float(readings[2]), 
-                    'current' : float(readings[3]), 
-                    'power' : float(readings[4]), 
-                    'switch' : int(readings[5]),
-                    'samples' : float(readings[6]), 
-                    'window' : int(readings[7])} 
-    raise Exception, "invalid line: %s" % line[0:-1]
-
-def unpack_ethernet(line):
+def unpack_energino_v1(line):
     logging.debug("line: %s" % line.replace('\n',''))
     if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
         readings = line[1:-1].split(",")
@@ -78,7 +65,7 @@ def unpack_ethernet(line):
 
 MODEL_ENERGINO = "Energino" 
 MODEL_ENERGINO_ETHERNET = "EnerginoEthernet" 
-MODELS = { MODEL_ENERGINO : unpack_serial, MODEL_ENERGINO_ETHERNET : unpack_ethernet }
+MODELS = { MODEL_ENERGINO : { 1 : unpack_energino_v1 } }
 
 class PyEnergino(object):
 
@@ -128,8 +115,7 @@ class PyEnergino(object):
             readings = line[1:-1].split(",")
             if readings[0] in MODELS.keys():
                 logging.debug("found %s version %u" % (readings[0], int(readings[1])))
-                self.unpack = MODELS[readings[0]]
-                self.type = readings[0]
+                self.unpack = MODELS[readings[0]][int(readings[1])]
                 return
         raise Exception, "unable to identify model: %s" % line
 
