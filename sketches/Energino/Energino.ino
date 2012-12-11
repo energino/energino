@@ -55,6 +55,7 @@
 
 // comment/uncomment to disable/enable debug
 //#define DEBUG
+// comment/uncomment to disable/enable ethernet support
 #define NOETH
 
 #define RELAY_PIN 3
@@ -75,11 +76,6 @@ const char KEY[] = "-";
 IPAddress HOST(216,52,233,121);
 const long PORT = 80;
 
-// This configuration is used when DHCP fails
-IPAddress IP(172,25,18,219);
-IPAddress MASK(255,255,255,0);
-IPAddress GW(172,25,18,254);
-
 // Energino parameters
 int R1 = 100;
 int R2 = 10;
@@ -90,10 +86,6 @@ int PERIOD = 2000;
 // Buffers used for parsing HTTP request lines
 char buffer[STRING_BUFFER_SIZE];
 char r[10];
-
-// Server configuration parameters, energino will listen for
-// incoming requests on this port
-const long SERVER_PORT = 8180;
 
 // Accumulators
 long VRaw;
@@ -107,22 +99,38 @@ long delta = 0;
 float VFinal = 0.0;
 float IFinal = 0.0;
 
-// Not found page
-const char CONTENT_404[] = "HTTP/1.1 404 Not Found\n\n";
+#ifndef NOETH
 
-// Not implemented page
-const char CONTENT_501[] = "HTTP/1.1 501 Not Implemented\n\n";
+  // Server configuration parameters, energino will listen for
+  // incoming requests on this port
+  const long SERVER_PORT = 8180;
 
-// JSON response header and footer
-const char JSON_RESPONSE_BEGIN[] = "HTTP/1.1 200 OK\nContent-Type: application/json\n\n[";
-const char JSON_RESPONSE_END[] = "]\n";
+  // This configuration is used when DHCP fails
+  IPAddress IP(172,25,18,219);
+  IPAddress MASK(255,255,255,0);
+  IPAddress GW(172,25,18,254);
+  
+  // Not found page
+  const char CONTENT_404[] = "HTTP/1.1 404 Not Found\n\n";
+  
+  // Not implemented page
+  const char CONTENT_501[] = "HTTP/1.1 501 Not Implemented\n\n";
+  
+  // JSON response header and footer
+  const char JSON_RESPONSE_BEGIN[] = "HTTP/1.1 200 OK\nContent-Type: application/json\n\n[";
+  const char JSON_RESPONSE_END[] = "]\n";
+
+  // working vars
+  EthernetServer server(SERVER_PORT);
+
+  // Minimum period for Ethernet updates
+  const long MIN_ETHERNET_PERIOD = 2000;
+
+#endif
 
 // magic string
 const char MAGIC[] = "Energino";
 const int REVISION = 1;
-
-// Minimum period for Ethernet updates
-const long MIN_ETHERNET_PERIOD = 2000;
 
 // Permanent configuration
 struct settings_t {
@@ -137,11 +145,7 @@ struct settings_t {
   long feed;
   IPAddress host;
   long port;
-} 
-settings;
-
-// working vars
-EthernetServer server(SERVER_PORT);
+} settings;
 
 void reset() {
   DBG Serial.println("Writing defaults.");  
@@ -181,13 +185,13 @@ void setup() {
   }
   // set sleep counter
   resetSleep(settings.period);
-  // Print hw address
-  char macstr[18];
-  snprintf(macstr, 18, "%02x:%02x:%02x:%02x:%02x:%02x", settings.mac[0], settings.mac[1], settings.mac[2], settings.mac[3], settings.mac[4], settings.mac[5]);
-  DBG Serial.print("HWAddr: ");
-  DBG Serial.println(macstr);
-  // Try to configure the ethernet using DHCP
   #ifndef NOETH
+    // Print hw address
+    char macstr[18];
+    snprintf(macstr, 18, "%02x:%02x:%02x:%02x:%02x:%02x", settings.mac[0], settings.mac[1], settings.mac[2], settings.mac[3], settings.mac[4], settings.mac[5]);
+    DBG Serial.print("HWAddr: ");
+    DBG Serial.println(macstr);
+    // Try to configure the ethernet using DHCP
     delay(2000);
     DBG Serial.println("Running DHCP...");
     if (Ethernet.begin(settings.mac) == 0) {
@@ -206,6 +210,7 @@ void setup() {
 }
 
 void loop() {
+  
   // Make sure that update period is not too high
   #ifndef NOETH
     if ((settings.feed != 0) && (settings.period < MIN_ETHERNET_PERIOD)) {
@@ -366,6 +371,8 @@ void serParseCommand()
   eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings)); 
 }
 
+#ifndef NOETH
+
 // This method accepts HTTP requests in the form GET /<cmd>/<param>/[value]
 void handleRequests() {
   EthernetClient request = server.available();
@@ -512,6 +519,8 @@ char * getDatastream() {
   strcat (buffer,"}");
   strcat (buffer,"]}");
 }
+
+#endif
 
 void dumpToSerial() {
   // Print data also on the serial
