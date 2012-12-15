@@ -55,6 +55,7 @@
 
 // comment/uncomment to disable/enable debug
 //#define DEBUG
+
 // comment/uncomment to disable/enable ethernet support
 #define NOETH
 
@@ -83,13 +84,9 @@ int OFFSET = 2500;
 int SENSITIVITY = 850;
 int PERIOD = 2000;
 
-// Buffers used for parsing HTTP request lines
-char buffer[STRING_BUFFER_SIZE];
-char r[10];
-
 // Accumulators
-long VRaw;
-long IRaw;
+long VRaw = 0;
+long IRaw = 0;
 
 // Control loop paramters
 long sleep = 0;
@@ -100,6 +97,9 @@ float VFinal = 0.0;
 float IFinal = 0.0;
 
 #ifndef NOETH
+
+  // Buffers used for parsing HTTP request lines
+  char buffer[STRING_BUFFER_SIZE];
 
   // Server configuration parameters, energino will listen for
   // incoming requests on this port
@@ -174,9 +174,6 @@ void setup() {
   // Default on
   pinMode(RELAY_PIN,OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
-  pinMode(13,OUTPUT);
-  digitalWrite(13, LOW);
-  // configuring serial
   // Loading setting 
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
   if (strcmp(settings.magic, MAGIC) != 0) {
@@ -296,13 +293,7 @@ void serParseCommand()
   // null-terminate input buffer
   inputBytes[i] = '\0';
   // execute command
-  if (cmd == 'F') {
-    long value = atol(inputBytesPtr);
-    if (value >= 0) {
-      settings.feed = value;
-    }
-  } 
-  else if (cmd == 'P') {
+  if (cmd == 'P') {
     int value = atoi(inputBytesPtr);
     if (value > 0) {
       resetSleep(value);
@@ -341,6 +332,13 @@ void serParseCommand()
       digitalWrite(RELAY_PIN, LOW);
     }
   } 
+  #ifndef NOETH
+  else if (cmd == 'F') {
+    long value = atol(inputBytesPtr);
+    if (value >= 0) {
+      settings.feed = value;
+    }
+  } 
   else if (cmd == 'K') {
     strncpy(settings.apikey, inputBytes,49);
     settings.apikey[48] = '\0';
@@ -365,6 +363,7 @@ void serParseCommand()
       settings.port = value;
     }
   }   
+  #endif
   else if (cmd == 'R') {
     reset();
   }
@@ -503,6 +502,7 @@ void sendContent(EthernetClient &request, char *value) {
 }
 
 char * getDatastream() {
+  char r[10];
   strcpy (buffer,"{\"version\":\"1.0.0\",");
   strcat (buffer,"\"datastreams\":[");
   strcat (buffer,"{\"id\":\"current\",\"current_value\":");
