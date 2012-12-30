@@ -169,10 +169,10 @@ class ListenerHandler(SimpleHTTPRequestHandler):
             try:
                 user_agent = self.headers.getheader('user-agent')
                 if self.headers.getheader('content-length') == None:
-                    content_len = 0
+                    value = json.loads(self.rfile.read())
                 else:
                     content_len = int(self.headers.getheader('content-length'))
-                value = json.loads(self.rfile.read(content_len))
+                    value = json.loads(self.rfile.read(content_len))
                 status = getattr(self.server, tokens[0]).put(tokens[1:], value, self.client_address[0], user_agent)
                 if status[0] == 200:
                     self.send_response(200)
