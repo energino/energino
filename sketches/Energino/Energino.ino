@@ -58,7 +58,7 @@
 //#define DEBUG
 
 // comment/uncomment to disable/enable ethernet support
-#define NOETH
+//#define NOETH
 
 #define RELAY_PIN 2
 
@@ -171,19 +171,16 @@ void setup() {
 #ifndef NOETH
   // Try to configure the ethernet using DHCP
   if (Ethernet.begin(settings.mac) == 0) {
-    DBG Serial.println("dhcp fail");
+    Serial.println("@dhcp: fail");
     return;
   }
-  // Print IP
-  DBG Serial.print("ip: ");
-  DBG Serial.println(Ethernet.localIP());
   // Start server
   server.begin();
   // Init SD
   pinMode(10, OUTPUT);
   // see if the card is present and can be initialized:
   if (!SD.begin(4)) {
-    Serial.println("sd fail");
+    Serial.println("@sd: fail");
     return;
   }
 #endif
@@ -456,10 +453,6 @@ void sendData() {
     DBG Serial.print("\n");
     client.stop();
   }
-  else {
-    // if you couldn't make a connection:
-    DBG Serial.println("connect fail");
-  }
 }
 
 void writeHeader(EthernetClient &request, const char * data) {
@@ -485,7 +478,6 @@ void writeDataStream(EthernetClient &request) {
   request.print(itoa(digitalRead(RELAY_PIN),r,10));
   request.print("}");
   request.print("]}");
-  ;
 }
 
 #endif
