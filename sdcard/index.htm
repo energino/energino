@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 	<title>Energino Dashbord</title>
 	<style>
 		.myBox {
@@ -25,7 +25,7 @@
 
 		ul, li { 
 			list-style: none; 
-			font-family: sans-serif;
+			font-family: Cantarell, sans-serif;
 			font-size: large;
 			margin: 0; 
 			padding: 0;
@@ -36,7 +36,6 @@
 		}
 
 		.box {
-			position: relative;
 			float: right;
 		}
 
@@ -137,20 +136,25 @@
 			cache: true,
 			success: function (data) {
 				for (var stream in data['datastreams']) {
+					if (data['datastreams'][stream]['current_value'] > 0) {
+						var value = data['datastreams'][stream]['current_value'];
+					} else {
+						var value = "0.0";
+					}
 					if (data['datastreams'][stream]['id'] == 'watts') {
-						document.getElementById("watts").innerHTML = data['datastreams'][stream]['current_value'];
+						document.getElementById("watts").innerHTML = value;
 					}
 					if (data['datastreams'][stream]['id'] == 'current') {
-						document.getElementById("current").innerHTML = data['datastreams'][stream]['current_value'];
+						document.getElementById("current").innerHTML = value;
 					}
 					if (data['datastreams'][stream]['id'] == 'voltage') {
-						document.getElementById("voltage").innerHTML = data['datastreams'][stream]['current_value'];
+						document.getElementById("voltage").innerHTML = value;
 					}
 					if (data['datastreams'][stream]['id'] == 'switch') {
 						if (data['datastreams'][stream]['current_value'] === 1) {
-							document.getElementById("status").className = "switch off"
+							document.getElementById("status").className = "switch off";
 						} else {
-							document.getElementById("status").className = "switch on"
+							document.getElementById("status").className = "switch on";
 						}
 					}
 				}
