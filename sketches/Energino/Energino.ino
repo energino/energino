@@ -55,12 +55,12 @@
 #include <avr/eeprom.h>
 
 // comment/uncomment to disable/enable debug
-#define DEBUG
+//#define DEBUG
 
 // comment/uncomment to disable/enable ethernet support
-//#define NOETH
+#define NOETH
 
-#define RELAY_PIN 3
+#define RELAY_PIN 2
 
 #ifdef DEBUG
 #define DBG if(1) 
@@ -69,13 +69,9 @@
 #endif
 
 // Feed id
-const long FEED = 0;
+long FEED = 0;
 // Cosm key
-const char KEY[] = "-";
-
-// Cosm configuration
-IPAddress HOST(216,52,233,121);
-const long PORT = 80;
+char KEY[] = "-";
 
 // Energino parameters
 int R1 = 100;
@@ -94,24 +90,23 @@ float IFinal = 0.0;
 
 #ifndef NOETH
 
-  // Server configuration parameters, energino will listen for
-  // incoming requests on this port
-  const long SERVER_PORT = 8180;
+// Cosm configuration
+IPAddress HOST(216,52,233,121);
+long PORT = 80;
 
-  // This configuration is used when DHCP fails
-  IPAddress IP(192,168,1,10);
-  IPAddress MASK(255,255,255,0);
-  IPAddress GW(192,168,1,1);
-  
-  // JSON response header and footer
-  const char JSON_RESPONSE_BEGIN[] = "HTTP/1.1 200 OK\nContent-Type: application/json\n\n[";
-  const char JSON_RESPONSE_END[] = "]\n";
+// Server configuration parameters, energino will listen for
+// incoming requests on this port
+const long SERVER_PORT = 8180;
 
-  // working vars
-  EthernetServer server(SERVER_PORT);
+// HTML response
+const char HTML_RESPONSE[43] PROGMEM = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n";
+const char HTML_RESPONSE_404[25] PROGMEM = "HTTP/1.1 404 Not Found\n\n";
 
-  // Minimum period for Ethernet updates
-  const long MIN_ETHERNET_PERIOD = 2000;
+// JSON response header and footer
+const char JSON_RESPONSE[49] PROGMEM = "HTTP/1.1 200 OK\nContent-Type: application/json\n\n";
+
+// working vars
+EthernetServer server(SERVER_PORT);
 
 #endif
 
@@ -134,7 +129,8 @@ struct settings_t {
   IPAddress host;
   long port;
 #endif
-} settings;
+} 
+settings;
 
 void reset() {
   strcpy (settings.magic,MAGIC);
@@ -160,7 +156,7 @@ void reset() {
 
 void setup() {
   // Set serial port
-  Serial.begin(115200);   
+  Serial.begin(115200); 
   // Default on
   pinMode(RELAY_PIN,OUTPUT);
   digitalWrite(RELAY_PIN, LOW);
@@ -168,47 +164,40 @@ void setup() {
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
   if (strcmp(settings.magic, MAGIC) != 0) {
     reset();
-    DBG Serial.println("write defaults");  
     eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
   }
   // set sleep counter
   resetSleep(settings.period);
-  #ifndef NOETH
-    // Try to configure the ethernet using DHCP
-    delay(2000);
-    DBG Serial.println("dhcp");
-    if (Ethernet.begin(settings.mac) == 0) {
-      DBG Serial.println("dhcp fail");
-      // Use static IP
-      Ethernet.begin(settings.mac, IP, MASK, GW);
-    }
-    // Print IP
-    DBG Serial.print("ip: ");
-    DBG Serial.println(Ethernet.localIP());
-    // Give the Ethernet shield a second to initialize:
-    delay(1000);
-    // Start server
-    server.begin();
-    // Init SD
-    pinMode(10, OUTPUT);
-    // see if the card is present and can be initialized:
-    if (!SD.begin(4)) {
-      Serial.println("sd fail");
-      return;
-    }
-  #endif
+#ifndef NOETH
+  // Try to configure the ethernet using DHCP
+  if (Ethernet.begin(settings.mac) == 0) {
+    DBG Serial.println("dhcp fail");
+    return;
+  }
+  // Print IP
+  DBG Serial.print("ip: ");
+  DBG Serial.println(Ethernet.localIP());
+  // Start server
+  server.begin();
+  // Init SD
+  pinMode(10, OUTPUT);
+  // see if the card is present and can be initialized:
+  if (!SD.begin(4)) {
+    Serial.println("sd fail");
+    return;
+  }
+#endif
 }
 
 void loop() {
-  
+
   // Make sure that update period is not too high
-  #ifndef NOETH
-    if ((settings.feed != 0) && (settings.period < MIN_ETHERNET_PERIOD)) {
-      DBG Serial.println("period too high");
-      resetSleep(MIN_ETHERNET_PERIOD);
-    }
-  #endif
-  
+#ifndef NOETH
+  if ((settings.feed != 0) && (settings.period < 2000)) {
+    resetSleep(2000);
+  }
+#endif
+
   // Start profiling
   long started = millis();
 
@@ -216,10 +205,10 @@ void loop() {
   serParseCommand();
 
   // Listen for incoming requests
-  #ifndef NOETH
-    handleRequests();
-  #endif
-  
+#ifndef NOETH
+  handleRequests();
+#endif
+
   // Instant values are too floating,
   // let's smooth them up
   long VRaw = 0;
@@ -235,16 +224,16 @@ void loop() {
   IFinal = scaleCurrent((float)IRaw/sleep);
 
   // send data to remote host
-  #ifndef NOETH
-    //sendData();
-  #endif
-  
+#ifndef NOETH
+  sendData();
+#endif
+
   // dump to serial
   dumpToSerial();
 
   // profiling
   delta = abs(millis() - started);
-  
+
   // Control loop
   sleep -= 5 * (delta - settings.period);
   if (sleep < 5) {
@@ -262,7 +251,8 @@ void serParseCommand()
   // working vars
   char cmd = '\0';
   int i, serAva;
-  char inputBytes[60] = { '\0' };
+  char inputBytes[60] = { 
+    '\0'           };
   char * inputBytesPtr = &inputBytes[0];
   // read command from serial
   serAva = Serial.available();
@@ -289,6 +279,7 @@ void serParseCommand()
   if (cmd == 'R') {
     reset();
   }
+#ifndef NOETH
   else if (cmd == 'F') {
     long value = atol(inputBytesPtr);
     if (value >= 0) {
@@ -314,9 +305,10 @@ void serParseCommand()
       settings.port = value;
     }
   }   
+#endif
   else {
     int value = atoi(inputBytesPtr);
-    if (value > 0) {
+    if (value < 0) {
       return;
     }
     if (cmd == 'P') {
@@ -326,16 +318,16 @@ void serParseCommand()
       settings.r1 = value;
     } 
     else if (cmd == 'B') {
-        settings.r2 = value;
+      settings.r2 = value;
     } 
     else if (cmd == 'C') {
-        settings.offset = value;
+      settings.offset = value;
     } 
     else if (cmd == 'D') {
-        settings.sensitivity = value;
-    } 
+      settings.sensitivity = value;
+    }
     else if (cmd == 'S') {
-      if (value >= 0) {
+      if (value > 0) {
         digitalWrite(RELAY_PIN, HIGH);
       } 
       else {
@@ -366,7 +358,6 @@ void handleRequests() {
       // If you've gotten to the end of the line (received a newline
       // character) the http request has ended, so you can send a reply
       if (c == '\n' || idx >= 50) {
-        //char method [5];
         char * method;
         method = strtok (buffer, " ");
         if (strcmp(method, "GET") == 0) {
@@ -376,11 +367,15 @@ void handleRequests() {
           if (strcmp(toks, "read") == 0) {
             toks = strtok (NULL, "/");
             if (strcmp(toks, "datastreams") == 0) {
-              sendContent(request);
+              writeHeader(request, JSON_RESPONSE);
+              writeDataStream(request);
               break;
             } 
             else if (strcmp(toks, "switch") == 0) {
-              sendContent(request, digitalRead(RELAY_PIN));
+              writeHeader(request, JSON_RESPONSE);
+              request.print("[");
+              request.print(digitalRead(RELAY_PIN));
+              request.print("]\n");
               break;
             } 
           } 
@@ -389,35 +384,33 @@ void handleRequests() {
             if (strcmp(toks, "switch") == 0) {
               toks = strtok (NULL, "/");
               if (atoi(toks) > 0) {
-                DBG Serial.println("switch up");
                 digitalWrite(RELAY_PIN, HIGH);
               } 
               else { 
-                DBG Serial.println("switch down");
                 digitalWrite(RELAY_PIN, LOW);
               }
-              sendContent(request, digitalRead(RELAY_PIN));
+              writeHeader(request, JSON_RESPONSE);
+              request.print("[");
+              request.print(digitalRead(RELAY_PIN));
+              request.print("]\n");
               break;
             } 
           }
           else {
-            File dataFile = SD.open("a.htm");
+            File dataFile = SD.open(toks, FILE_READ);
             if (dataFile) {
+              writeHeader(request, HTML_RESPONSE);
               while (dataFile.available()) {
-                  request.write(dataFile.read());
+                request.write(dataFile.read());
               }
               dataFile.close();
-            } else {
-              Serial.println(dataFile);
-            }
+              request.write("\n");
+              break;
+            } 
           }
-          // send a not found response header
-          request.println("HTTP/1.1 404 Not Found\n\n");
-          request.println();
-          break;
         }
-        request.println("HTTP/1.1 501 Not Implemented\n\n");
-        request.println();
+        writeHeader(request, HTML_RESPONSE_404);
+        request.write("\n");
         break;
       }
     }
@@ -465,20 +458,14 @@ void sendData() {
   }
   else {
     // if you couldn't make a connection:
-    DBG Serial.println("fail");
+    DBG Serial.println("connect fail");
   }
 }
 
-void sendContent(EthernetClient &request, long value) {
-  request.println(JSON_RESPONSE_BEGIN);
-  request.print(value);
-  request.print(JSON_RESPONSE_END);
-}
-
-void sendContent(EthernetClient &request) {
-  request.println(JSON_RESPONSE_BEGIN);
-  writeDataStream(request);
-  request.print(JSON_RESPONSE_END);
+void writeHeader(EthernetClient &request, const char * data) {
+  while (pgm_read_byte(data) != 0x00) {
+    request.write(pgm_read_byte(data++));             
+  }
 }
 
 void writeDataStream(EthernetClient &request) {
@@ -497,8 +484,10 @@ void writeDataStream(EthernetClient &request) {
   request.print("{\"id\":\"switch\", \"current_value\":");
   request.print(itoa(digitalRead(RELAY_PIN),r,10));
   request.print("}");
-  request.print("]}");;
+  request.print("]}");
+  ;
 }
+
 #endif
 
 void dumpToSerial() {
@@ -519,39 +508,39 @@ void dumpToSerial() {
   Serial.print(delta);
   Serial.print(",");
   Serial.print(sleep);
-  #ifdef NOETH
-    Serial.print(",");
-    Serial.print("-");
-    Serial.print(",");
-    Serial.print("-");
-    Serial.print(",");
-    Serial.print("-");
-    Serial.print(",");
-    Serial.print("-");
-    Serial.print(",");
-    Serial.print("-");
-    Serial.print(",");
-    Serial.print("-");
-  #else
-    Serial.print(",");
-    Serial.print(Ethernet.localIP());
-    Serial.print(",");
-    Serial.print(SERVER_PORT);
-    Serial.print(",");
-    for (byte thisByte = 0; thisByte < 4; thisByte++) {
-      // print the value of each byte of the IP address:
-      Serial.print(settings.host[thisByte], DEC);
-      if (thisByte < 3) {
-        Serial.print(".");
-      }
+#ifdef NOETH
+  Serial.print(",");
+  Serial.print("-");
+  Serial.print(",");
+  Serial.print("-");
+  Serial.print(",");
+  Serial.print("-");
+  Serial.print(",");
+  Serial.print("-");
+  Serial.print(",");
+  Serial.print("-");
+  Serial.print(",");
+  Serial.print("-");
+#else
+  Serial.print(",");
+  Serial.print(Ethernet.localIP());
+  Serial.print(",");
+  Serial.print(SERVER_PORT);
+  Serial.print(",");
+  for (byte thisByte = 0; thisByte < 4; thisByte++) {
+    // print the value of each byte of the IP address:
+    Serial.print(settings.host[thisByte], DEC);
+    if (thisByte < 3) {
+      Serial.print(".");
     }
-    Serial.print(",");
-    Serial.print(settings.port);
-    Serial.print(",");
-    Serial.print(settings.feed);
-    Serial.print(",");
-    Serial.print(settings.apikey);
-  #endif
+  }
+  Serial.print(",");
+  Serial.print(settings.port);
+  Serial.print(",");
+  Serial.print(settings.feed);
+  Serial.print(",");
+  Serial.print(settings.apikey);
+#endif
   Serial.print("\n");  
 
 }
@@ -568,4 +557,3 @@ void resetSleep(long value) {
   sleep = value / 1000 * 5000;
   settings.period = value;
 }
-
