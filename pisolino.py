@@ -119,16 +119,6 @@ class Listener(ThreadingMixIn, TCPServer):
         logging.info("RESTful interface listening on port: %u" % port)
         TCPServer.__init__(self, ("", port), ListenerHandler)
 
-class Command(object):
-
-    def __init__(self, cmd):
-        self.cmd = cmd
-
-    def run(self):
-        self.process = Popen(self.cmd, shell=False, stdout=PIPE, stderr=PIPE, close_fds=True)
-        (self.stdout, self.stderr) = self.process.communicate()
-        return self.process.returncode   
-
 class AccessPoint(threading.Thread):
     
     def __init__(self):
@@ -166,8 +156,9 @@ class AccessPoint(threading.Thread):
 
     def ifconfig(self, iface, mode):
         cmd = Command(["/sbin/ifconfig", iface, mode])
-        ret = cmd.run()
-        if ret is None or ret != 0:
+    	process = Popen(cmd, shell=False, stdout=PIPE, stderr=PIPE, close_fds=True)
+        (self.stdout, self.stderr) = process.communicate()
+        if self.process.returncode is None or self.process.returncode != 0:
             logging.warning("unable to execute command: %s" % " ".join(cmd.cmd))
 
     def ifdown(self):
