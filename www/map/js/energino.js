@@ -90,15 +90,15 @@ function refresh() {
 function plot(data) {
     for (node in data['results']) {
         var id = data['results'][node]['id']
-	var dutyCycle = "100"
+	var clients = "n.a."
 	var amperes = "0.0"
 	var relay = -1 
         for (datastream in data['results'][node]['datastreams']) {
             if (data['results'][node]['datastreams'][datastream]['id'] == 'current') {
                 amperes = data['results'][node]['datastreams'][datastream]['current_value']
             }
-            if (data['results'][node]['datastreams'][datastream]['id'] == 'duty_cycle') {
-                dutyCycle = data['results'][node]['datastreams'][datastream]['current_value']
+            if (data['results'][node]['datastreams'][datastream]['id'] == 'clients') {
+                clients = data['results'][node]['datastreams'][datastream]['current_value']
             }
             if (data['results'][node]['datastreams'][datastream]['id'] == 'switch') {
                 relay = data['results'][node]['datastreams'][datastream]['current_value']
@@ -114,7 +114,7 @@ function plot(data) {
         bounds.extend(latLng)
         if (relay == "1") {
             relay = "0"
-            dutyCycle = "0"
+            clients = "0"
             var image = new google.maps.MarkerImage('images/dd-start.png', new google.maps.Size(20, 34), new google.maps.Point(0, 0), new google.maps.Point(10, 34))
         } else if (relay == 0) {
             relay = "1"
@@ -136,7 +136,7 @@ function plot(data) {
         }
         var label = new Label({
             map: map,
-            text: title + ' (' + dutyCycle + '%)'
+            text: title + ' (' + clients + ')'
         });
 	if (markersDict[id]) {
             markersDict[id].setMap(null)
