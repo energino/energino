@@ -51,18 +51,11 @@ DEFAULT_PORT=8181
 DEFAULT_WWW_ROOT='/etc/energinod/www/'
 
 STATE_ONLINE="online"
-STATE_IDLE="idle"
 STATE_OFFLINE="offline"
 
-ONLINE_DUTY_CYCLE = 100
-IDLE_DUTY_CYCLE = 50
-OFFLINE_DUTY_CYCLE = 0
-
 ONLINE_TIMEOUT=60
-IDLE_TIMEOUT=60
+OFFLINE_TIMEOUT=60
 TICK=1
-
-ALWAYS_ON=[]
 
 class JSONMergeError(Exception):
     def __init__(self, value):
@@ -379,10 +372,6 @@ class Daemonino(threading.Thread):
                         if self.state[id_feed]['state'] != STATE_OFFLINE:
                             self.state[id_feed]['counter'] = self.state[id_feed]['counter'] + 1
                         if self.state[id_feed]['state'] == STATE_ONLINE and self.state[id_feed]['counter'] > ONLINE_TIMEOUT:
-                            logging.debug("no clients for node %u setting state to %s" % (id_feed, STATE_IDLE))
-                            self.state[id_feed]['state'] = STATE_IDLE
-                            self.state[id_feed]['counter'] = 0
-                        if self.state[id_feed]['state'] == STATE_IDLE and self.state[id_feed]['counter'] > IDLE_TIMEOUT:
                             logging.debug("no clients for node %u setting state to %s" % (id_feed, STATE_OFFLINE))
                             self.state[id_feed]['state'] = STATE_OFFLINE
                             self.state[id_feed]['counter'] = 0
@@ -393,7 +382,6 @@ class Daemonino(threading.Thread):
                     self.state[id_feed]['state'] = STATE_ONLINE
                     self.state[id_feed]['counter'] = 0
                 self.set_switch(result, self.state[id_feed]['state'])
-                self.set_idle(result, self.state[id_feed]['state'])
             time.sleep(TICK)
 
     def set_switch(self, result, state):
@@ -401,7 +389,7 @@ class Daemonino(threading.Thread):
             if 'switch' in result['datastreams']:
                 switch = result['datastreams']['switch']['current_value']
                 url = None
-                if (state in [ STATE_ONLINE, STATE_IDLE ]) and (switch == 1):
+                if (state in [ STATE_ONLINE ]) and (switch == 1):
                     url = 'http://' + result['energino'] + ':8180/write/switch/0'
                 if (state in [ STATE_OFFLINE ]) and (switch == 0):
                     url = 'http://' + result['energino'] + ':8180/write/switch/1'
@@ -410,42 +398,9 @@ class Daemonino(threading.Thread):
                     res = urlopen(url, timeout=2)
                     status = json.loads(res.read())
                     result['datastreams']['switch']['current_value'] = status[0]
-                    if status[0] == 1:
-                        if 'duty_cycle' in result['datastreams']:
-                            result['datastreams']['duty_cycle']['current_value'] = 0
+                    if status[0] in [ 1, 2 ]:
                         if 'clients' in result['datastreams']:
                             result['datastreams']['clients']['current_value'] = 0
-                    if status[0] == 0:
-                        if 'duty_cycle' in result['datastreams']:
-                            result['datastreams']['duty_cycle']['current_value'] = 100
-                        if 'clients' in result['datastreams']:
-                            result['datastreams']['clients']['current_value'] = 0
-        except HTTPError, e:
-            logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
-        except URLError, e:
-            logging.error("url not available %s, reason %s" % (url, e.reason))
-        except:
-            logging.exception("Exception:")        
-
-    def set_idle(self, result, state):
-        try:
-            if 'duty_cycle' in result['datastreams']:
-                url = None
-                if state in [ STATE_OFFLINE ]:
-                    result['datastreams']['duty_cycle']['current_value'] = OFFLINE_DUTY_CYCLE
-                else:
-                    if state == STATE_ONLINE:                    
-                        newDutyCycle = ONLINE_DUTY_CYCLE
-                    else:
-                        newDutyCycle = IDLE_DUTY_CYCLE
-                    if result['datastreams']['duty_cycle']['current_value'] != newDutyCycle:
-                        logging.info("feed %u, setting duty cycle to %u" % (result['id'], newDutyCycle) )
-                        conn = httplib.HTTPConnection(host=result['dispatcher'], port=8180, timeout=10)
-                        conn.request('PUT', "/ap/duty_cycle/%u" % newDutyCycle)
-                        resp = conn.getresponse()
-                        if resp.status == 200:
-                            data = json.loads(resp.read())
-                            result['datastreams']['duty_cycle']['current_value'] = data[0]
         except HTTPError, e:
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
