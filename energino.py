@@ -63,9 +63,7 @@ def unpack_energino_v1(line):
                 'key' : readings[13]}
     raise Exception, "invalid line: %s" % line[0:-1]
 
-MODEL_ENERGINO = "Energino" 
-MODEL_ENERGINO_ETHERNET = "EnerginoEthernet" 
-MODELS = { MODEL_ENERGINO : { 1 : unpack_energino_v1 } }
+MODELS = { "Energino" : { 1 : unpack_energino_v1 } }
 
 class PyEnergino(object):
 

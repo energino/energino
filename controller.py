@@ -45,7 +45,6 @@ from SimpleHTTPServer import SimpleHTTPRequestHandler
 from SocketServer import TCPServer
 from SocketServer import ThreadingMixIn
 from urllib2 import urlopen, URLError, HTTPError
-from energino import MODEL_ENERGINO_ETHERNET
 
 DEFAULT_PORT=8181
 DEFAULT_WWW_ROOT='/etc/energinod/www/'
@@ -253,10 +252,7 @@ class Feeds(object):
                     return (401, '')
         
                 # update address
-                if agent == MODEL_ENERGINO_ETHERNET:
-                    self.__feeds[int(feed[0])]['energino'] = address
-                else:    
-                    self.__feeds[int(feed[0])]['dispatcher'] = address
+                self.__feeds[int(feed[0])]['dispatcher'] = address
 
                 # update datastreams
                 for incoming in value['datastreams']:
