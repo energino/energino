@@ -32,6 +32,7 @@ A system daemon interfacing with energino
 import socket
 import logging
 import simplejson as json
+import math
 import os
 import sys
 import signal
@@ -281,7 +282,7 @@ class Feeds(object):
             else:
                 
                 try:
-                    resolved = self.__feeds[int(feed[0])]['energino']
+                    resolved = self.__feeds[int(feed[0])]['dispatcher']
                     conn = httplib.HTTPConnection(host=resolved, port=8180, timeout=10)
                     conn.request('GET', "/write/%s/%s" % (feed[2], value['current_value']))
                     res = conn.getresponse()
@@ -315,10 +316,11 @@ class Listener(ThreadingMixIn, TCPServer):
 
 class Daemonino(threading.Thread):
     
-    def __init__(self, feeds, autonomic, nb_default_feeds):
+    def __init__(self, feeds, autonomic, nb_default_feeds, ratio):
         super(Daemonino, self).__init__()
         self.feeds = feeds
         self.autonomic = autonomic
+        self.ratio = ratio
         self.daemon = True
         self.stop = threading.Event()
         self.state = {}
@@ -347,12 +349,7 @@ class Daemonino(threading.Thread):
                 time.sleep(TICK)
                 continue
             nb_clients = self.get_tot_num_clients()
-            if nb_clients >= 4:
-                ALWAYS_ON = [ 1, 2, 3 ]
-            elif nb_clients >= 2:
-                ALWAYS_ON = [ 2, 3 ]
-            else:
-                ALWAYS_ON = [ 3 ]
+            nb_aps = math.ceil(nb_clients/self.ratio)
             feeds = self.feeds.get('')
             if feeds[0] != 200:
                 continue 
@@ -374,7 +371,7 @@ class Daemonino(threading.Thread):
                     else:
                         self.state[id_feed]['state'] = STATE_ONLINE
                         self.state[id_feed]['counter'] = 0
-                if id_feed in ALWAYS_ON:
+                if id_feed in range(1, nb_aps + 1):
                     self.state[id_feed]['state'] = STATE_ONLINE
                     self.state[id_feed]['counter'] = 0
                 self.set_switch(result, self.state[id_feed]['state'])
@@ -386,9 +383,9 @@ class Daemonino(threading.Thread):
                 switch = result['datastreams']['switch']['current_value']
                 url = None
                 if (state in [ STATE_ONLINE ]) and (switch == 1):
-                    url = 'http://' + result['energino'] + ':8180/write/switch/0'
+                    url = 'http://' + result['dispatcher'] + ':8180/write/switch/0'
                 if (state in [ STATE_OFFLINE ]) and (switch == 0):
-                    url = 'http://' + result['energino'] + ':8180/write/switch/1'
+                    url = 'http://' + result['dispatcher'] + ':8180/write/switch/1'
                 if url != None:
                     logging.info("opening url %s" % url)
                     res = urlopen(url, timeout=2)
@@ -430,6 +427,7 @@ if __name__ == "__main__":
     p.add_option('--log', '-l', dest="log")
     p.add_option('--feeds', '-f', dest="feeds", default=0)
     p.add_option('--autonomic', '-a', action="store_true", dest="autonomic", default=False)    
+    p.add_option('--ratio', '-r', dest="ratio", default=2)
     options, arguments = p.parse_args()
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(message)s', filename=options.log, filemode='w')
@@ -437,7 +435,7 @@ if __name__ == "__main__":
     host = socket.gethostbyname(socket.gethostname())
     feeds = Feeds(host, int(options.port))
     
-    daemonino = Daemonino(feeds, options.autonomic, int(options.feeds))
+    daemonino = Daemonino(feeds, options.autonomic, int(options.feeds), int(options.ratio))
     daemonino.start()
     
     listener = Listener(host, feeds, int(options.port), options.www)
