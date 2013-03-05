@@ -155,8 +155,8 @@ class AccessPoint(threading.Thread):
         logging.info("access point down interval set to %us" % self.down_interval)
 
     def ifconfig(self, iface, mode):
-        cmd = Command(["/sbin/ifconfig", iface, mode])
-    	process = Popen(cmd, shell=False, stdout=PIPE, stderr=PIPE, close_fds=True)
+        cmd = ["/sbin/ifconfig", iface, mode]
+        process = Popen(cmd, shell=False, stdout=PIPE, stderr=PIPE, close_fds=True)
         (self.stdout, self.stderr) = process.communicate()
         if self.process.returncode is None or self.process.returncode != 0:
             logging.warning("unable to execute command: %s" % " ".join(cmd.cmd))
