@@ -144,11 +144,11 @@ void reset() {
   settings.host = HOST;
   settings.port = PORT;
   strcpy (settings.apikey,KEY);  
-  randomSeed(analogRead(0));
   settings.mac[0] = 0x90;
   settings.mac[1] = 0xA2;
   settings.mac[2] = 0xDA;
   for (int i = 3; i < 6; i++) {
+    randomSeed(analogRead(0));
     settings.mac[i] = random(0, 255);
   }
 #endif
