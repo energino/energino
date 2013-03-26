@@ -32,7 +32,6 @@ A system daemon interfacing with energino
 import socket
 import logging
 import simplejson as json
-import math
 import os
 import sys
 import signal
@@ -54,7 +53,6 @@ STATE_ONLINE="online"
 STATE_OFFLINE="offline"
 
 ONLINE_TIMEOUT=60
-OFFLINE_TIMEOUT=60
 TICK=1
 
 class JSONMergeError(Exception):
@@ -207,18 +205,30 @@ class Feeds(object):
         self.__host = host
         self.__port = port
         self.__key = 0
-        self.__feeds= {}
+        self.__feeds = {}
     
     def get_next_key(self):
         self.__key = self.__key + 1
         return self.__key
 
+    def reset_clients(self, id_feed):
+        if 'clients' in self.__feeds[id_feed]:
+            del self.__feeds[id_feed]['clients']
+
+    def reset_datastreams(self, id_feed):
+        if 'datastreams' in self.__feeds[id_feed]:
+            del self.__feeds[id_feed]['datastreams']
+
+    def get_nb_clients(self):
+        nb_clients = 0
+        for feed in self.__feeds:
+            if "clients" in self.__feeds[feed]:
+                nb_clients = nb_clients + len(self.__feeds[feed]['clients'])
+        return nb_clients
+
     def get(self, feed):
-        if len(feed) == 0:
-            result = { 'results' : self.__feeds.values(), 'totalResults' : len(self.__feeds), 'startIndex' : 0, 'itemsPerPage' : 100 }
-            return (200, result)
-        elif int(feed[0]) in self.__feeds:
-            results = JSONMerge({}).merge(self.__feeds[int(feed[0])]) 
+        # update status tag
+        for results in self.__feeds.values():
             last = datetime.strptime(results['updated'], "%Y-%m-%dT%H:%M:%S.%fZ")
             now = datetime.now()
             delta = timedelta(seconds=30)
@@ -226,8 +236,18 @@ class Feeds(object):
                 results['status'] = 'dead'
             else:
                 results['status'] = 'live'
-            results['datastreams'] = results['datastreams'].values()   
+
+        from copy import deepcopy
+        feeds = deepcopy(self.__feeds)
+                
+        # produce results
+        if len(feed) == 0:
+            result = { 'results' : feeds.values(), 'totalResults' : len(feeds), 'startIndex' : 0, 'itemsPerPage' : 100 }
+            return (200, result)
+        elif int(feed[0]) in feeds:
+            results = feeds[int(feed[0])]
             return (200, results)
+        
         return (404, '')
     
     def post(self, value):
@@ -249,29 +269,49 @@ class Feeds(object):
             
             if len(feed) == 1:
                 
-                if not ("version" in value or "datastreams" in value):
+                if not "version" in value or ( not "datastreams" in value and not "clients" in value):
                     return (401, '')
         
+                energino = False
+                if "datastreams" in value:
+                    for incoming in value['datastreams']:
+                        if incoming['id'] == "switch":
+                            energino = True
+                        
                 # update address
-                self.__feeds[int(feed[0])]['dispatcher'] = address
+                if energino:
+                    self.__feeds[int(feed[0])]['energino'] = address
+                else:
+                    self.__feeds[int(feed[0])]['dispatcher'] = address
+    
+                if "datastreams" in value:
 
-                # update datastreams
-                for incoming in value['datastreams']:
-                    if incoming['id'] in self.__feeds[int(feed[0])]['datastreams']:
-                        local = self.__feeds[int(feed[0])]['datastreams'][incoming['id']]
-                        local['at'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-                        local['current_value'] = incoming['current_value']
-                        if local['max_value'] < local['current_value']:
-                            local['max_value'] = local['current_value']
-                        if local['min_value'] > local['current_value']:
-                            local['min_value'] = local['current_value']
-                    else:
-                        self.__feeds[int(feed[0])]['datastreams'][incoming['id']] = { 'at' : datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), 
-                                                                              'max_value' : incoming['current_value'],
-                                                                              'min_value' : incoming['current_value'],
-                                                                              'id' : incoming['id'],'current_value' : incoming['current_value'] }
-                # delete datastreams from incoming document
-                del value['datastreams']
+                    # update datastreams
+                    for incoming in value['datastreams']:
+                        if incoming['id'] in self.__feeds[int(feed[0])]['datastreams']:
+                            local = self.__feeds[int(feed[0])]['datastreams'][incoming['id']]
+                            local['at'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                            local['current_value'] = incoming['current_value']
+                            if local['max_value'] < local['current_value']:
+                                local['max_value'] = local['current_value']
+                            if local['min_value'] > local['current_value']:
+                                local['min_value'] = local['current_value']
+                        else:
+                            self.__feeds[int(feed[0])]['datastreams'][incoming['id']] = { 'at' : datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ"), 
+                                                                                  'max_value' : incoming['current_value'],
+                                                                                  'min_value' : incoming['current_value'],
+                                                                                  'id' : incoming['id'],'current_value' : incoming['current_value'] }
+                    # delete datastreams from incoming document
+                    del value['datastreams']
+                
+                if "clients" in value:
+                    
+                    # update clients
+                    self.__feeds[int(feed[0])]['clients'] = value['clients']
+                    
+                    # delete clients from incoming document
+                    del value['clients']
+                
                 # merge everything else
                 self.__feeds[int(feed[0])] = JSONMerge(self.__feeds[int(feed[0])]).merge(value)
                 # update here and there
@@ -316,11 +356,10 @@ class Listener(ThreadingMixIn, TCPServer):
 
 class Daemonino(threading.Thread):
     
-    def __init__(self, feeds, autonomic, nb_default_feeds, ratio):
+    def __init__(self, feeds, autonomic, nb_default_feeds):
         super(Daemonino, self).__init__()
         self.feeds = feeds
         self.autonomic = autonomic
-        self.ratio = ratio
         self.daemon = True
         self.stop = threading.Event()
         self.state = {}
@@ -328,72 +367,92 @@ class Daemonino(threading.Thread):
             res = feeds.post({'version': '1.0.0', 'title': 'My feed'})
             if res[0] == 201:
                 logging.info("added feed %u" % res[1])
-            
-    def get_tot_num_clients(self):
-        tot_clients = 0
-        feeds = self.feeds.get('')
-        if feeds[0] != 200:
-            return tot_clients
-        if not 'results' in feeds[1]:
-            return tot_clients
-        for result in feeds[1]['results']:
-            if "clients" in result['datastreams']:
-                clients = result['datastreams']['clients']['current_value']
-                tot_clients = tot_clients + clients
-        return tot_clients
-                              
+
     def run(self):
+        
         logging.info("starting up daemonino")
+        
         while True:
+            
+            time.sleep(TICK)
+
+            # not autonomic continue
             if not self.autonomic:
-                time.sleep(TICK)
                 continue
-            nb_clients = self.get_tot_num_clients()
-            nb_aps = math.ceil(nb_clients/self.ratio)
+
+            # fetch datastreams
             feeds = self.feeds.get('')
+            
             if feeds[0] != 200:
                 continue 
+            
             if not 'results' in feeds[1]:
                 continue
+            
+            # update state list
             for result in feeds[1]['results']:
                 id_feed = result['id']
                 if not id_feed in self.state:
-                    self.state[id_feed ] = { 'state' :  STATE_ONLINE, 'counter' : 0 }
-                if "clients" in result['datastreams']:
-                    clients = result['datastreams']['clients']['current_value']
-                    if clients == 0:
+                    self.state[id_feed] = { 'state' : STATE_ONLINE, 'counter' : 0 }
+
+            nb_clients = self.feeds.get_nb_clients()
+            
+            if nb_clients > 3:
+                active_list = [ 1, 2, 3 ]
+            elif nb_clients > 2:
+                active_list = [ 1, 2 ]
+            else:
+                active_list = [ 2 ]
+
+            # control loop
+            for result in feeds[1]['results']:
+                
+                id_feed = result['id']
+                
+                if not id_feed in self.state:
+                    self.state[id_feed] = { 'state' : STATE_ONLINE, 'counter' : 0 }
+                    
+                if "clients" in result:
+                    
+                    clients = len(result['clients'])
+                    
+                    if clients > 0:
+                        
+                        self.state[id_feed]['state'] = STATE_ONLINE
+                        self.state[id_feed]['counter'] = 0
+                            
+                    else:
+
                         if self.state[id_feed]['state'] != STATE_OFFLINE:
                             self.state[id_feed]['counter'] = self.state[id_feed]['counter'] + 1
+
                         if self.state[id_feed]['state'] == STATE_ONLINE and self.state[id_feed]['counter'] > ONLINE_TIMEOUT:
                             logging.debug("no clients for node %u setting state to %s" % (id_feed, STATE_OFFLINE))
                             self.state[id_feed]['state'] = STATE_OFFLINE
                             self.state[id_feed]['counter'] = 0
-                    else:
-                        self.state[id_feed]['state'] = STATE_ONLINE
-                        self.state[id_feed]['counter'] = 0
-                if id_feed in range(1, nb_aps + 1):
+                        
+                if id_feed in active_list:
                     self.state[id_feed]['state'] = STATE_ONLINE
                     self.state[id_feed]['counter'] = 0
-                self.set_switch(result, self.state[id_feed]['state'])
-            time.sleep(TICK)
-
-    def set_switch(self, result, state):
+                        
+                self.set_switch(result, id_feed)
+                
+    def set_switch(self, result, id_feed):
+        state = self.state[id_feed]['state']
         try:
             if 'switch' in result['datastreams']:
                 switch = result['datastreams']['switch']['current_value']
                 url = None
                 if (state in [ STATE_ONLINE ]) and (switch == 1):
-                    url = 'http://' + result['dispatcher'] + ':8180/write/switch/0'
+                    url = 'http://' + result['energino'] + ':8180/write/switch/0'
                 if (state in [ STATE_OFFLINE ]) and (switch == 0):
-                    url = 'http://' + result['dispatcher'] + ':8180/write/switch/1'
+                    url = 'http://' + result['energino'] + ':8180/write/switch/1'
                 if url != None:
                     logging.info("opening url %s" % url)
                     res = urlopen(url, timeout=2)
                     status = json.loads(res.read())
-                    result['datastreams']['switch']['current_value'] = status[0]
-                    if status[0] in [ 1, 2 ]:
-                        if 'clients' in result['datastreams']:
-                            result['datastreams']['clients']['current_value'] = 0
+                    if status[0] == 1:
+                        feeds.reset_clients(id_feed)
         except HTTPError, e:
             logging.error("energino could not execute the command %s, error code %u" % (url, e.code))
         except URLError, e:
@@ -404,7 +463,36 @@ class Daemonino(threading.Thread):
     def shutdown(self):
         logging.info("Stopping daemonino...")
         self.stop.set()
-                    
+
+class OdinClient(threading.Thread):
+    
+    def __init__(self, feeds):
+        super(OdinClient, self).__init__()
+        self.feeds = feeds
+        self.daemon = True
+        self.stop = threading.Event()
+        self.mappings = { 1 : "192.168.2.150", 2 : "192.168.2.166", 3 : "192.168.2.170" }
+
+    def run(self):
+        logging.info("starting up daemonino")
+        while True:
+            time.sleep(TICK)
+
+            res = urlopen('http://127.0.0.1:8080/odin/clients/all/json', timeout=2)
+            status = json.loads(res.read())
+            
+            for mapping in self.mappings:
+                feeds = { 'version' : '1.0.0', 'clients' : [] }
+                for entry in status:
+                    if entry['agent'] == self.mappings[mapping]:
+                        feeds['clients'].append({ 'mac' : entry['macAddress'], 'ssid' : entry['lvapSsid'] })    
+                self.feeds.reset_clients(mapping)
+                self.feeds.put([ mapping ], feeds, "127.0.0.1", "Odin")
+                
+    def shutdown(self):
+        logging.info("Stopping daemonino...")
+        self.stop.set()
+
 def sigint_handler(signal, frame):
     logging.info("Received SIGINT, terminating...")
     listener.socket.shutdown(SHUT_RDWR)
@@ -425,9 +513,8 @@ if __name__ == "__main__":
     p.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
     p.add_option('--www', '-w', dest="www", default=DEFAULT_WWW_ROOT)
     p.add_option('--log', '-l', dest="log")
-    p.add_option('--feeds', '-f', dest="feeds", default=0)
-    p.add_option('--autonomic', '-a', action="store_true", dest="autonomic", default=False)    
-    p.add_option('--ratio', '-r', dest="ratio", default=2)
+    p.add_option('--feeds', '-f', dest="feeds", default=3)
+    p.add_option('--autonomic', '-a', action="store_true", dest="autonomic", default=True)    
     options, arguments = p.parse_args()
 
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s %(message)s', filename=options.log, filemode='w')
@@ -435,9 +522,12 @@ if __name__ == "__main__":
     host = socket.gethostbyname(socket.gethostname())
     feeds = Feeds(host, int(options.port))
     
-    daemonino = Daemonino(feeds, options.autonomic, int(options.feeds), int(options.ratio))
+    daemonino = Daemonino(feeds, options.autonomic, int(options.feeds))
     daemonino.start()
     
+    odinclient = OdinClient(feeds)
+    odinclient.start()
+
     listener = Listener(host, feeds, int(options.port), options.www)
 
     signal.signal(signal.SIGINT, sigint_handler)
