@@ -3,8 +3,8 @@ google.load('visualization', '1', {packages: ['gauge']});
 google.setOnLoadCallback(initialize);
 
 var options = {
-    width: 165,
-    height: 165,
+    width: 155,
+    height: 155,
     redFrom: 9,
     redTo: 10,
     yellowFrom: 7.5,
@@ -56,36 +56,47 @@ function plot(data) {
     if (len == 0) {
         for (node in data['results']) {
             var id = data['results'][node]['id']
-            document.getElementById('feeds').innerHTML += '<tr><td width="20%"><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)</p><p class="info">Node: <span id="chart_title_' + id + '"></span><br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span></td><td width="20%"><div class="charts" id="chart' + id + '"></div></td><td width="60%"><p class="clients"><span id="chart_clients_'+id+'">n.a.</span></p></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td width="20%"><img id="ap_status_' + id + '" width="70" src="imgs/ap_on.jpg"><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)<br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span></td><td width="20%"><div class="charts" id="chart' + id + '"></div></td><td width="60%"><span id="chart_clients_'+id+'">n.a.</span></div></td></tr>';
         }
     }
     for (node in data['results']) {
         var id = data['results'][node]['id']
         var amperes = "0.0"
-        var nbClients = "n.a."
-        var title = "n.a."
         var dispatcher = "n.a."
+        var energino = "n.a."
         if ('dispatcher' in data['results'][node]) {
             dispatcher = data['results'][node]['dispatcher']
         } 
-        if ('title' in data['results'][node]) {
-            title = data['results'][node]['title']
+        if ('energino' in data['results'][node]) {
+            energino = data['results'][node]['energino']
         } 
         for (datastream in data['results'][node]['datastreams']) {
             if (data['results'][node]['datastreams'][datastream]['id'] == 'watts') {
                 amperes = data['results'][node]['datastreams'][datastream]['current_value']
             }
-            if (data['results'][node]['datastreams'][datastream]['id'] == 'clients') {
-                nbClients = data['results'][node]['datastreams'][datastream]['current_value']
-            }
         }
-	var aLink = '<a href="http://'+dispatcher+':8180/read/datastreams">' + dispatcher + '</a>'
-	document.getElementById("chart_title_" + id).innerHTML = title
-	document.getElementById("chart_clients_" + id).innerHTML = nbClients
-	if (dispatcher != 'n.a.') { 
-		document.getElementById("chart_dispatcher_" + id).innerHTML = aLink
+	document.getElementById("chart_dispatcher_" + id).innerHTML = dispatcher
+	if (energino != 'n.a.') { 
+		document.getElementById("chart_energino_" + id).innerHTML = '<a href="http://'+energino+':8180/read/datastreams">' + energino + '</a>'
 	} else {
-		document.getElementById("chart_dispatcher_" + id).innerHTML = dispatcher
+		document.getElementById("chart_energino_" + id).innerHTML = energino
+	}
+        if ('clients' in data['results'][node]) {
+		document.getElementById("ap_status_" + id).src = "imgs/ap_on.png"
+		var clientsList = '<table width="100%"><tr>'
+		if (data['results'][node]['clients'].length == 0) {	
+			clientsList += '<td><p class="info">No clients</p></td>'
+		}
+		for (client in data['results'][node]['clients']) {
+			ssid =  data['results'][node]['clients'][client]['ssid']
+			mac =  data['results'][node]['clients'][client]['mac']
+			clientsList += '<td><p class="info"><img width="60" src="imgs/sta.png" /><br/>'+ssid+'<br />'+mac+'</p></td>'
+		}
+		clientsList += "</tr></table>"
+		document.getElementById("chart_clients_" + id).innerHTML = clientsList
+	} else {
+		document.getElementById("ap_status_" + id).src = "imgs/ap_off.png"
+		document.getElementById("chart_clients_" + id).innerHTML = '<p class="info">No clients</p>'
 	}
 	if (parseFloat(amperes) < 0) {
 		amperes = "0.0"

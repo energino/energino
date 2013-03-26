@@ -13,12 +13,7 @@ td {
     margin: 0px auto;
 }
 
-.clients {
-	font-family: sans;
-	font-size: 42pt;
-}
-
-.info {
+.info, table .info {
 	font-family: sans;
 	font-size: 10pt;
 }
