@@ -130,7 +130,8 @@ class PyEnergino(object):
             logging.debug("polling drift is higher than 10%%, target is %u actual is %u" % (self.interval, readings['window']))
         return readings
                 
-if __name__ == "__main__":
+def main():
+
     p = optparse.OptionParser()
     p.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
     p.add_option('--interval', '-i', dest="interval", default=DEFAULT_INTERVAL)
@@ -139,7 +140,7 @@ if __name__ == "__main__":
     p.add_option('--bps', '-b', dest="bps", default=DEFAULT_PORT_SPEED)
     p.add_option('--verbose', '-v', action="store_true", dest="verbose", default=False)    
     p.add_option('--log', '-l', dest="log")
-    options, arguments = p.parse_args()
+    options, _ = p.parse_args()
     init = []
     if options.offset != None:
         init.append("#C%s" % options.offset)
@@ -163,4 +164,7 @@ if __name__ == "__main__":
             logging.debug("0 [V] 0 [A] 0 [W] 0 [samples] 0 [window]")
         else:
             logging.info("%s [V] %s [A] %s [W] %s [samples] %s [window]" % (readings['voltage'], readings['current'], readings['power'], readings['samples'], readings['window']))
+    
+if __name__ == "__main__":
+    main()
     

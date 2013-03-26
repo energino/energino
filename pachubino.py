@@ -36,9 +36,6 @@ import uuid
 import sys
 import optparse
 
-from SimpleHTTPServer import SimpleHTTPRequestHandler
-from SocketServer import TCPServer
-from SocketServer import ThreadingMixIn
 from dispatcher import Dispatcher, BACKOFF
 from energino import PyEnergino
 
@@ -47,16 +44,6 @@ DEFAULT_CONFIG = '/etc/pachubino.conf'
 
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
-class ListenerHandler(SimpleHTTPRequestHandler):
-    def do_GET(self):
-        pass
-                
-class Listener(ThreadingMixIn, TCPServer):
-    def __init__(self, port = DEFAULT_SERVER_PORT):
-        self.allow_reuse_address = True
-        logging.info("RESTful interface listening on port: %u" % port)
-        TCPServer.__init__(self, ("", port), ListenerHandler)
-            
 class Pachubino(Dispatcher):
         
     def start(self):
@@ -89,17 +76,16 @@ class Pachubino(Dispatcher):
         logging.info("thread %s stopped" % self.__class__.__name__) 
 
 def sigint_handler(signal, frame):
-    pachubino.shutdown()
     sys.exit(0)
 
-if __name__ == "__main__":
+def main():
 
     p = optparse.OptionParser()
     p.add_option('--uuid', '-u', dest="uuid", default=uuid.getnode())
     p.add_option('--config', '-c', dest="config", default=DEFAULT_CONFIG)
     p.add_option('--log', '-l', dest="log")
     p.add_option('--debug', '-d', action="store_true", dest="debug", default=False)       
-    options, arguments = p.parse_args()
+    options, _ = p.parse_args()
 
     if options.debug:
         lvl = logging.DEBUG
@@ -117,9 +103,9 @@ if __name__ == "__main__":
     pachubino = Pachubino(options.uuid, options.config)
     pachubino.start()   
          
-    listener = Listener()
-
     signal.signal(signal.SIGINT, sigint_handler)
     signal.signal(signal.SIGTERM, sigint_handler)
         
-    listener.serve_forever()
+if __name__ == "__main__":
+    main()
+    
