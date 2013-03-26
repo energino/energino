@@ -474,7 +474,7 @@ class OdinClient(threading.Thread):
         self.mappings = { 1 : "192.168.2.150", 2 : "192.168.2.166", 3 : "192.168.2.170" }
 
     def run(self):
-        logging.info("starting up daemonino")
+        logging.info("starting up odin client")
         while True:
             time.sleep(TICK)
 
@@ -490,7 +490,7 @@ class OdinClient(threading.Thread):
                 self.feeds.put([ mapping ], feeds, "127.0.0.1", "Odin")
                 
     def shutdown(self):
-        logging.info("Stopping daemonino...")
+        logging.info("Stopping odin client...")
         self.stop.set()
 
 def sigint_handler(signal, frame):
