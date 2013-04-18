@@ -1,13 +1,21 @@
-<!DOCTYPE html>
 <html>
   <head>
-    <title>Energino Apps</title>
+    <title>Energino Gauge</title>
+    <link href="css/energino.css" rel="stylesheet" type="text/css"/> 
+    <script type='text/javascript' src='https://www.google.com/jsapi'></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="js/energino.js"></script>
+    <script type="text/javascript" src="/js/config_daemonino.js"></script>
   </head>
   <body>
-  <ul>
-    <li><a href="/gauge/">Gauge</a></li>
-    <li><a href="/map/">Map</a></li>
-  <ul>
+    <div id="container">
+      <table id="feeds" border="0" width="100%">
+        <th>Access Points</th>
+        <th>Power</th>
+        <th>Clients</th>
+      </table>
+    </div>
+  </div>
   </body>
 </html>
 

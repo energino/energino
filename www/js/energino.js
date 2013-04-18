@@ -16,7 +16,7 @@ var options = {
 var gaugesDict = {};
 
 function initialize() {
-    var intervalID = setInterval(refresh, 5000);
+    var intervalID = setInterval(refresh, 8000);
     $.ajax({
         url: url + "/v2/feeds.json?user=wing",
         type: 'GET',
@@ -64,6 +64,7 @@ function plot(data) {
         var amperes = "0.0"
         var dispatcher = "n.a."
         var energino = "n.a."
+        var switch_energino = 1
         if ('dispatcher' in data['results'][node]) {
             dispatcher = data['results'][node]['dispatcher']
         } 
@@ -73,6 +74,9 @@ function plot(data) {
         for (datastream in data['results'][node]['datastreams']) {
             if (data['results'][node]['datastreams'][datastream]['id'] == 'watts') {
                 amperes = data['results'][node]['datastreams'][datastream]['current_value']
+            }
+            if (data['results'][node]['datastreams'][datastream]['id'] == 'switch') {
+                switch_energino = data['results'][node]['datastreams'][datastream]['current_value']
             }
         }
 	document.getElementById("chart_dispatcher_" + id).innerHTML = dispatcher
