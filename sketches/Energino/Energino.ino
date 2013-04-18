@@ -58,7 +58,7 @@
 //#define DEBUG
 
 // comment/uncomment to disable/enable ethernet support
-//#define NOETH
+#define NOETH
 
 #define RELAY_PIN 2
 
@@ -77,7 +77,7 @@ char KEY[] = "-";
 int R1 = 100;
 int R2 = 10;
 int OFFSET = 2500;
-int SENSITIVITY = 850;
+int SENSITIVITY = 185;
 int PERIOD = 2000;
 
 // Control loop paramters
@@ -122,13 +122,11 @@ struct settings_t {
   int r2;
   int offset;
   int sensitivity;
-#ifndef NOETH
   byte mac[6];
   char apikey[49];
   long feed;
   IPAddress host;
   long port;
-#endif
 } 
 settings;
 
@@ -170,10 +168,12 @@ void setup() {
   resetSleep(settings.period);
 #ifndef NOETH
   // Try to configure the ethernet using DHCP
+  Serial.println("@dhcp");
   if (Ethernet.begin(settings.mac) == 0) {
     Serial.println("@dhcp: fail");
     return;
   }
+  Serial.println("@dhcp done");
   // Start server
   server.begin();
   // Init SD
