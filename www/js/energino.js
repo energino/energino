@@ -18,7 +18,7 @@ var gaugesDict = {};
 function initialize() {
     var intervalID = setInterval(refresh, 8000);
     $.ajax({
-        url: url + "/v2/feeds.json?user=wing",
+        url: "/v2/feeds.json?user=wing",
         type: 'GET',
         dataType: 'json',
         cache: false,
@@ -31,13 +31,13 @@ function initialize() {
         beforeSend: setHeader
     });
     function setHeader(xhr) {
-        xhr.setRequestHeader('X-PachubeApiKey', key);
+        xhr.setRequestHeader('X-PachubeApiKey', "");
     }
 }
 
 function refresh() {
     $.ajax({
-        url: url + "/v2/feeds.json?user=wing",
+        url: "/v2/feeds.json?user=wing",
         type: 'GET',
         dataType: 'json',
         cache: false,
@@ -47,7 +47,7 @@ function refresh() {
         beforeSend: setHeader
     });
     function setHeader(xhr) {
-        xhr.setRequestHeader('X-PachubeApiKey', key);
+        xhr.setRequestHeader('X-PachubeApiKey', "");
     }
 }
 
@@ -56,7 +56,7 @@ function plot(data) {
     if (len == 0) {
         for (node in data['results']) {
             var id = data['results'][node]['id']
-            document.getElementById('feeds').innerHTML += '<tr><td width="20%"><img id="ap_status_' + id + '" width="70" src="imgs/ap_on.jpg"><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)<br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span></td><td width="20%"><div class="charts" id="chart' + id + '"></div></td><td width="60%"><span id="chart_clients_'+id+'">n.a.</span></div></td></tr>';
+            document.getElementById('feeds').innerHTML += '<tr><td width="20%"><img id="ap_status_' + id + '" width="70" src="/imgs/ap_on.png"><p class="info">Feed: ' + id + ' (<a href="/feeds/'+id+'">view</a>)<br />Dispatcher: <span id="chart_dispatcher_' + id + '"></span><br />Energino: <span id="chart_energino_' + id + '"></span></td><td width="20%"><div class="charts" id="chart' + id + '"></div></td><td width="60%"><span id="chart_clients_'+id+'">n.a.</span></div></td></tr>';
         }
     }
     for (node in data['results']) {
@@ -86,7 +86,7 @@ function plot(data) {
 		document.getElementById("chart_energino_" + id).innerHTML = energino
 	}
         if ('clients' in data['results'][node]) {
-		document.getElementById("ap_status_" + id).src = "imgs/ap_on.png"
+		document.getElementById("ap_status_" + id).src = "/imgs/ap_on.png"
 		var clientsList = '<table width="100%"><tr>'
 		if (data['results'][node]['clients'].length == 0) {	
 			clientsList += '<td><p class="info">No clients</p></td>'
@@ -94,12 +94,12 @@ function plot(data) {
 		for (client in data['results'][node]['clients']) {
 			ssid =  data['results'][node]['clients'][client]['ssid']
 			mac =  data['results'][node]['clients'][client]['mac']
-			clientsList += '<td><p class="info"><img width="60" src="imgs/sta.png" /><br/>'+ssid+'<br />'+mac+'</p></td>'
+			clientsList += '<td><p class="info"><img width="60" src="/imgs/sta.png" /><br/>'+ssid+'<br />'+mac+'</p></td>'
 		}
 		clientsList += "</tr></table>"
 		document.getElementById("chart_clients_" + id).innerHTML = clientsList
 	} else {
-		document.getElementById("ap_status_" + id).src = "imgs/ap_off.png"
+		document.getElementById("ap_status_" + id).src = "/imgs/ap_off.png"
 		document.getElementById("chart_clients_" + id).innerHTML = '<p class="info">No clients</p>'
 	}
 	if (parseFloat(amperes) < 0) {
