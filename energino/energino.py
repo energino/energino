@@ -76,22 +76,7 @@ class PyEnergino(object):
             self.ser.port = dev
             self.ser.open()
             time.sleep(2)
-            try:
-                self.configure()
-            except:
-                try:
-                    self.configure()
-                except:
-                    self.configure()
-            self.send_cmds([ "#P%u" % self.interval ])
-            try:
-                self.unpack(self.ser.readline())
-            except:
-                try:
-                    self.unpack(self.ser.readline())
-                except:
-                    self.unpack(self.ser.readline())
-                    
+            self.configure()
             logging.debug("attaching to port %s!" % dev)
             return
         raise Exception, "unable to configure serial port"
@@ -107,14 +92,15 @@ class PyEnergino(object):
             self.send_cmd(cmd)
                 
     def configure(self):
-        line = self.ser.readline()
-        logging.debug("line: %s" % line.replace('\n',''))
-        if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
-            readings = line[1:-1].split(",")
-            if readings[0] in MODELS.keys():
-                logging.debug("found %s version %u" % (readings[0], int(readings[1])))
-                self.unpack = MODELS[readings[0]][int(readings[1])]
-                return
+        for _ in range(0, 3):
+            line = self.ser.readline()
+            logging.debug("line: %s" % line.replace('\n',''))
+            if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
+                readings = line[1:-1].split(",")
+                if readings[0] in MODELS.keys():
+                    logging.debug("found %s version %u" % (readings[0], int(readings[1])))
+                    self.unpack = MODELS[readings[0]][int(readings[1])]
+                    return
         raise Exception, "unable to identify model: %s" % line
 
     def write(self, value):
