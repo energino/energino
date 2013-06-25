@@ -77,6 +77,7 @@ class PyEnergino(object):
             self.ser.open()
             time.sleep(2)
             self.configure()
+            self.send_cmds([ "#P%u" % self.interval ])
             logging.debug("attaching to port %s!" % dev)
             return
         raise Exception, "unable to configure serial port"
