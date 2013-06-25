@@ -546,6 +546,6 @@ float scaleCurrent(float current) {
 }
 
 void resetSleep(long value) {
-  sleep = value / 1000 * 5000;
+  sleep = (value * 4400) / 1000;
   settings.period = value;
 }
