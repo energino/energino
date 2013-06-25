@@ -86,7 +86,6 @@ class PyEnergino(object):
         logging.debug("sending initialization sequence %s" % cmd)
         self.write(cmd + '\n')
         time.sleep(2)
-        self.unpack(self.ser.readline())
 
     def send_cmds(self, cmds):
         for cmd in cmds:           
