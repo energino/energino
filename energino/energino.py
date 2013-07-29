@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2012, Roberto Riggio
+# Copyright (c) 2013, Roberto Riggio
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ import datetime
 
 DEFAULT_PORT = '/dev/ttyACM0'
 DEFAULT_PORT_SPEED = 115200
-DEFAULT_INTERVAL = 2000
+DEFAULT_INTERVAL = 200
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
 def unpack_energino_v1(line):
@@ -67,7 +67,7 @@ MODELS = { "Energino" : { 1 : unpack_energino_v1 } }
 
 class PyEnergino(object):
 
-    def __init__(self, port=DEFAULT_PORT, bps=DEFAULT_PORT_SPEED, interval = DEFAULT_INTERVAL):
+    def __init__(self, port=DEFAULT_PORT, bps=DEFAULT_PORT_SPEED, interval=DEFAULT_INTERVAL):
         self.interval = interval
         self.ser = serial.Serial(baudrate=bps, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
         devs = glob.glob(port + "*")
@@ -107,13 +107,15 @@ class PyEnergino(object):
         self.ser.flushOutput()
         self.ser.write(value)
 
-    def fetch(self):
+    def fetch(self, field = None):
         readings = self.unpack(self.ser.readline())
         readings['port'] = self.ser.port
         readings['at'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         delta = math.fabs(self.interval - readings['window'])
         if delta / self.interval > 0.1:
             logging.debug("polling drift is higher than 10%%, target is %u actual is %u" % (self.interval, readings['window']))
+        if field != None:
+            return readings[field]
         return readings
                 
 def main():
