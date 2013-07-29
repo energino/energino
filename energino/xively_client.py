@@ -26,23 +26,27 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-A dispatcher base class for energino
+A system daemon interfacing energino with Xively
 """
 
 import time
+import signal
+import logging
+import uuid
+import sys
+import optparse
 import httplib
 import threading
-import logging
 import ConfigParser
 import json
 
 from collections import deque
+from energino import PyEnergino
 
-DEFAULT_CONFIG = ''
+DEFAULT_CONFIG = '/etc/xively.conf'
 
 DEFAULT_INTERVAL = "5000"
-DEFAULT_HOST = 'api.cosm.com'
-DEFAULT_SERVER_PORT=8181
+DEFAULT_HOST = 'api.xively.com'
 DEFAULT_PORT = 80
 DEFAULT_BPS = 115200
 DEFAULT_DEVICE = '/dev/ttyACM'
@@ -50,8 +54,8 @@ DEFAULT_PERIOD = "10"
 
 LOG_FORMAT = '%(asctime)-15s %(message)s'
     
-BACKOFF = 60    
-            
+BACKOFF = 60  
+
 class DispatcherProcedure(threading.Thread):
     
     def __init__(self, dispatcher):
@@ -108,7 +112,7 @@ class DispatcherProcedure(threading.Thread):
         logging.debug("updating feed %s, sending %s samples" % (self.dispatcher.feed, len(pending)) )
         try:
             conn = httplib.HTTPConnection(host=self.dispatcher.host, port=self.dispatcher.port, timeout=10)
-            conn.request('PUT', "/v2/feeds/%s" % self.dispatcher.feed, json.dumps(feed), { 'X-PachubeApiKey' : self.dispatcher.key })
+            conn.request('PUT', "/v2/feeds/%s" % self.dispatcher.feed, json.dumps(feed), { 'X-ApiKey' : self.dispatcher.key })
             resp = conn.getresponse()
             conn.close() 
             if resp.status != 200:
@@ -238,7 +242,7 @@ class Dispatcher(threading.Thread):
         if self.feed != None and self.feed != '':
             logging.info("trying to fetch http://%s:%u/v2/feeds/%s" % (self.host, self.port, self.feed))
             conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=10)
-            conn.request('GET', "/v2/feeds/%s" % self.feed, headers={'X-PachubeApiKey': self.key})
+            conn.request('GET', "/v2/feeds/%s" % self.feed, headers={'X-ApiKey': self.key})
             resp = conn.getresponse()
             conn.close() 
             if resp.status == 200:
@@ -252,7 +256,7 @@ class Dispatcher(threading.Thread):
         # create new feed
         logging.info("creating new feed")
         conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=10)
-        conn.request('POST', '/v2/feeds/', json.dumps(self.getJsonFeed()), {'X-PachubeApiKey': self.key})
+        conn.request('POST', '/v2/feeds/', json.dumps(self.getJsonFeed()), {'X-ApiKey': self.key})
         resp = conn.getresponse()
         conn.close()        
 
@@ -293,3 +297,70 @@ class Dispatcher(threading.Thread):
         config.set("Location", "tags", ",".join(self.tags))
         
         config.write(open(self.config,"w"))        
+
+class XivelyClient(Dispatcher):
+        
+    def start(self):
+        
+        # start dispatcher
+        self.dispatcher.add_stream("voltage", "derivedSI", "Volts", "V")
+        self.dispatcher.add_stream("current", "derivedSI", "Amperes", "A")
+        self.dispatcher.add_stream("power", "derivedSI", "Watts", "W")
+        self.dispatcher.add_stream("switch", "derivedSI", "Switch", "S")
+        self.dispatcher.start()
+        
+        # start pool loop
+        while True:
+            try:
+                # configure feed
+                self.discover()
+                # setup serial port
+                energino = PyEnergino(self.device, self.bps, self.interval)
+                # start updating
+                logging.info("begin polling")
+                while True:
+                    readings = energino.fetch()
+                    if readings == None:
+                        break
+                    logging.debug("appending new readings: %s [V] %s [A] %s [W] %u [Q]" % (readings['voltage'], readings['current'], readings['power'], len(self.dispatcher.outgoing)))
+                    self.dispatcher.enqueue(readings)
+            except Exception:
+                logging.exception("exception, backing off for %u seconds" % BACKOFF)
+                time.sleep(BACKOFF)
+        # thread stopped
+        logging.info("thread %s stopped" % self.__class__.__name__) 
+
+def sigint_handler(signal, frame):
+    sys.exit(0)
+
+def main():
+
+    p = optparse.OptionParser()
+    p.add_option('--uuid', '-u', dest="uuid", default=uuid.getnode())
+    p.add_option('--config', '-c', dest="config", default=DEFAULT_CONFIG)
+    p.add_option('--log', '-l', dest="log")
+    p.add_option('--debug', '-d', action="store_true", dest="debug", default=False)       
+    options, _ = p.parse_args()
+
+    if options.debug:
+        lvl = logging.DEBUG
+    else:
+        lvl = logging.INFO
+
+    if options.log != None:
+        logging.basicConfig(level=lvl, format=LOG_FORMAT, filename=options.log, filemode='w')
+    else:
+        logging.basicConfig(level=lvl, format=LOG_FORMAT)
+
+    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGTERM, sigint_handler)
+
+    xively = XivelyClient(options.uuid, options.config)
+    xively.start()   
+         
+    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGTERM, sigint_handler)
+        
+if __name__ == "__main__":
+    main()
+    
