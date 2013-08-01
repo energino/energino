@@ -319,11 +319,14 @@ class XivelyClient(Dispatcher):
                 # start updating
                 logging.info("begin polling")
                 while True:
-                    readings = energino.fetch()
-                    if readings == None:
-                        break
-                    logging.debug("appending new readings: %s [V] %s [A] %s [W] %u [Q]" % (readings['voltage'], readings['current'], readings['power'], len(self.dispatcher.outgoing)))
-                    self.dispatcher.enqueue(readings)
+                    if self.stop.isSet():
+                        return
+                    try:
+                        readings = energino.fetch()
+                        logging.debug("appending new readings: %s [V] %s [A] %s [W] %u [Q]" % (readings['voltage'], readings['current'], readings['power'], len(self.dispatcher.outgoing)))
+                        self.dispatcher.enqueue(readings)
+                    except:
+                        logging.warning("sample lost")
             except Exception:
                 logging.exception("exception, backing off for %u seconds" % BACKOFF)
                 time.sleep(BACKOFF)
@@ -331,6 +334,8 @@ class XivelyClient(Dispatcher):
         logging.info("thread %s stopped" % self.__class__.__name__) 
 
 def sigint_handler(signal, frame):
+    global vm
+    xively.shutdown()
     sys.exit(0)
 
 def main():
@@ -354,6 +359,8 @@ def main():
 
     signal.signal(signal.SIGINT, sigint_handler)
     signal.signal(signal.SIGTERM, sigint_handler)
+
+    global xively
 
     xively = XivelyClient(options.uuid, options.config)
     xively.start()   
