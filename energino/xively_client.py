@@ -32,7 +32,6 @@ A system daemon interfacing energino with Xively
 import time
 import signal
 import logging
-import uuid
 import sys
 import optparse
 import httplib
@@ -91,24 +90,17 @@ class DispatcherProcedure(threading.Thread):
         with self.lock:
             feed = self.dispatcher.getJsonFeed()
             feed['datastreams'] = []
-            
             for stream in self.streams.values():
                 stream['datapoints'] = []
-
             pending = deque()
-            
             while self.outgoing:
                 readings = self.outgoing.popleft()
                 pending.append(readings)
-                
                 for stream in self.streams.values():
                     stream['current_value'] = readings[stream['id']] 
-                    stream['at'] = readings['at']     
                     stream['datapoints'].append({ "at" :  readings['at'], "value" :  readings[stream['id']] })
-
             for stream in self.streams.values():
                 feed['datastreams'].append(stream)
-                
         logging.debug("updating feed %s, sending %s samples" % (self.dispatcher.feed, len(pending)) )
         try:
             conn = httplib.HTTPConnection(host=self.dispatcher.host, port=self.dispatcher.port, timeout=10)
@@ -125,9 +117,11 @@ class DispatcherProcedure(threading.Thread):
             while pending:
                 self.outgoing.appendleft(pending.pop())
         
-    def enqueue(self, readings):
+    def enqueue(self, readings, send = False):
         with self.lock:
             self.outgoing.append(readings)
+        if send:
+            self.process()
 
 class Dispatcher(threading.Thread):
 
@@ -315,7 +309,7 @@ class XivelyClient(Dispatcher):
                 # configure feed
                 self.discover()
                 # setup serial port
-                energino = PyEnergino(self.device, self.bps, self.interval)
+                energino = PyEnergino(self.device, self.bps, self.interval * 1000)
                 # start updating
                 logging.info("begin polling")
                 while True:
@@ -323,8 +317,8 @@ class XivelyClient(Dispatcher):
                         return
                     try:
                         readings = energino.fetch()
-                        logging.debug("appending new readings: %s [V] %s [A] %s [W] %u [Q]" % (readings['voltage'], readings['current'], readings['power'], len(self.dispatcher.outgoing)))
-                        self.dispatcher.enqueue(readings)
+                        logging.debug("appending new readings: %s [V] %s [A] %s [W]" % (readings['voltage'], readings['current'], readings['power']))
+                        self.dispatcher.enqueue(readings, True)
                     except:
                         logging.warning("sample lost")
             except Exception:
@@ -341,7 +335,7 @@ def sigint_handler(signal, frame):
 def main():
 
     p = optparse.OptionParser()
-    p.add_option('--uuid', '-u', dest="uuid", default=uuid.getnode())
+    p.add_option('--uuid', '-u', dest="uuid", default="Energino")
     p.add_option('--config', '-c', dest="config", default=DEFAULT_CONFIG)
     p.add_option('--log', '-l', dest="log")
     p.add_option('--debug', '-d', action="store_true", dest="debug", default=False)       
