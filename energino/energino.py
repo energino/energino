@@ -92,13 +92,13 @@ class PyEnergino(object):
             self.send_cmd(cmd)
                 
     def configure(self):
-        for _ in range(0, 3):
+        for _ in range(0, 5):
             line = self.ser.readline()
             logging.debug("line: %s" % line.replace('\n',''))
             if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
                 readings = line[1:-1].split(",")
-                if readings[0] in MODELS.keys():
-                    logging.debug("found %s version %u" % (readings[0], int(readings[1])))
+                if readings[0] in MODELS.keys() and readings[1].isdigit() and int(readings[1]) in MODELS[readings[0]]:
+                    logging.debug("found %s version %s" % (readings[0], readings[1]))
                     self.unpack = MODELS[readings[0]][int(readings[1])]
                     return
         raise Exception, "unable to identify model: %s" % line
