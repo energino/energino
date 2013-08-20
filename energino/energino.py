@@ -38,6 +38,8 @@ import glob
 import math
 import time
 import datetime
+import numpy as np
+import scipy.io
 
 DEFAULT_PORT = '/dev/ttyACM0'
 DEFAULT_PORT_SPEED = 115200
@@ -126,21 +128,30 @@ def main():
     p.add_option('--offset', '-o', dest="offset", default=None)
     p.add_option('--sensitivity', '-s', dest="sensitivity", default=None)
     p.add_option('--bps', '-b', dest="bps", default=DEFAULT_PORT_SPEED)
-    p.add_option('--verbose', '-v', action="store_true", dest="verbose", default=False)    
+    p.add_option('--matlab', '-t', dest="matlab")
+    p.add_option('--verbose', '-v', action="store_true", dest="verbose", default=False)   
     p.add_option('--log', '-l', dest="log")
     options, _ = p.parse_args()
     init = []
+    
     if options.offset != None:
         init.append("#C%s" % options.offset)
     if options.sensitivity != None:
         init.append("#D%s" % options.sensitivity)
+        
     if options.verbose:
         lvl = logging.DEBUG
     else:
         lvl = logging.INFO
+    
     logging.basicConfig(level=lvl, format=LOG_FORMAT, filename=options.log, filemode='w')
+    
     energino = PyEnergino(options.port, options.bps, int(options.interval))
     energino.send_cmds(init)
+    
+    if options.matlab != None:
+        mat = []
+
     while True:
         energino.ser.flushInput()
         try:
@@ -151,7 +162,12 @@ def main():
         except:
             logging.debug("0 [V] 0 [A] 0 [W] 0 [samples] 0 [window]")
         else:
+            if options.matlab != None:
+                mat.append((readings['voltage'], readings['current'], readings['power'], readings['samples'], readings['window']))
             logging.info("%s [V] %s [A] %s [W] %s [samples] %s [window]" % (readings['voltage'], readings['current'], readings['power'], readings['samples'], readings['window']))
+
+        if options.matlab != None:
+            scipy.io.savemat(options.matlab, { 'READINGS' : np.array(mat) }, oned_as = 'column')
     
 if __name__ == "__main__":
     main()
