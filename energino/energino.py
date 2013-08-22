@@ -124,10 +124,10 @@ def main():
 
     p = optparse.OptionParser()
     p.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
-    p.add_option('--interval', '-i', dest="interval", default=DEFAULT_INTERVAL)
-    p.add_option('--offset', '-o', dest="offset", default=None)
-    p.add_option('--sensitivity', '-s', dest="sensitivity", default=None)
-    p.add_option('--bps', '-b', dest="bps", default=DEFAULT_PORT_SPEED)
+    p.add_option('--interval', '-i', dest="interval", type="int", default=DEFAULT_INTERVAL)
+    p.add_option('--offset', '-o', dest="offset", type="int", default=None)
+    p.add_option('--sensitivity', '-s', dest="sensitivity", type="int", default=None)
+    p.add_option('--bps', '-b', dest="bps", type="int", default=DEFAULT_PORT_SPEED)
     p.add_option('--matlab', '-t', dest="matlab")
     p.add_option('--verbose', '-v', action="store_true", dest="verbose", default=False)   
     p.add_option('--log', '-l', dest="log")
@@ -135,9 +135,9 @@ def main():
     init = []
     
     if options.offset != None:
-        init.append("#C%s" % options.offset)
+        init.append("#C%u" % options.offset)
     if options.sensitivity != None:
-        init.append("#D%s" % options.sensitivity)
+        init.append("#D%u" % options.sensitivity)
         
     if options.verbose:
         lvl = logging.DEBUG
@@ -146,7 +146,7 @@ def main():
     
     logging.basicConfig(level=lvl, format=LOG_FORMAT, filename=options.log, filemode='w')
     
-    energino = PyEnergino(options.port, options.bps, int(options.interval))
+    energino = PyEnergino(options.port, options.bps, options.interval)
     energino.send_cmds(init)
     
     if options.matlab != None:

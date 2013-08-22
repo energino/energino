@@ -120,8 +120,8 @@ class XivelyDispatcher(threading.Thread):
 
     def __init__(self, uuid, config, backend, rapid = False):
         super(XivelyDispatcher, self).__init__()
-        logging.info("uuid %s" % str(uuid))
-        self.uuid = str(uuid)
+        logging.info("uuid %s" % uuid)
+        self.uuid = uuid
         self.backend = backend
         self.rapid = rapid
         self.daemon = True

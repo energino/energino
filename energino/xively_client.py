@@ -46,9 +46,9 @@ def main():
 
     p = optparse.OptionParser()
     p.add_option('--uuid', '-u', dest="uuid", default="Energino")
-    p.add_option('--interval', '-i', dest="interval", default=DEFAULT_INTERVAL)
+    p.add_option('--interval', '-i', dest="interval", type="int", default=DEFAULT_INTERVAL)
     p.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
-    p.add_option('--bps', '-b', dest="bps", default=DEFAULT_PORT_SPEED)
+    p.add_option('--bps', '-b', dest="bps", type="int", default=DEFAULT_PORT_SPEED)
     p.add_option('--config', '-c', dest="config", default=DEFAULT_CONFIG)
     p.add_option('--log', '-l', dest="log")
     p.add_option('--rapid', '-r', action="store_true", dest="rapid", default=False)       
@@ -70,7 +70,7 @@ def main():
 
     global xively
 
-    backend = PyEnergino(options.port, options.bps, int(options.interval))
+    backend = PyEnergino(options.port, options.bps, options.interval)
 
     xively = XivelyDispatcher(options.uuid, options.config, backend, options.rapid)
 
