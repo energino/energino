@@ -38,8 +38,6 @@ import glob
 import math
 import time
 import datetime
-import numpy as np
-import scipy.io
 
 DEFAULT_PORT = '/dev/ttyACM0'
 DEFAULT_PORT_SPEED = 115200
@@ -65,7 +63,23 @@ def unpack_energino_v1(line):
                 'key' : readings[13]}
     raise Exception, "invalid line: %s" % line[0:-1]
 
-MODELS = { "Energino" : { 1 : unpack_energino_v1 } }
+def unpack_energino_yun_v1(line):
+    logging.debug("line: %s" % line.replace('\n',''))
+    if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
+        readings = line[1:-1].split(",")
+        if len(readings) == 10:
+            return { 'voltage' : float(readings[2]), 
+                'current' : float(readings[3]), 
+                'power' : float(readings[4]), 
+                'switch' : int(readings[5]), 
+                'window' : int(readings[6]), 
+                'samples' : int(readings[7]), 
+                'feed' : readings[8], 
+                'key' : readings[9]}
+    raise Exception, "invalid line: %s" % line[0:-1]
+
+MODELS = { "Energino" : { 1 : unpack_energino_v1 },
+           "EnerginoYun" : { 1 : unpack_energino_yun_v1 } }
 
 class PyEnergino(object):
 
@@ -167,6 +181,8 @@ def main():
             logging.info("%s [V] %s [A] %s [W] %s [samples] %s [window]" % (readings['voltage'], readings['current'], readings['power'], readings['samples'], readings['window']))
 
         if options.matlab != None:
+            import numpy as np
+            import scipy.io
             scipy.io.savemat(options.matlab, { 'READINGS' : np.array(mat) }, oned_as = 'column')
     
 if __name__ == "__main__":
