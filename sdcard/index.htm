@@ -35,6 +35,12 @@
 			padding: 10px;
 		}
 
+		.loading {
+			width: 50%;
+			margin: 0 auto;
+			text-align: center;
+		}
+
 		.box {
 			float: right;
 		}
@@ -130,7 +136,7 @@
 
 		function refresh() {
 		    $.ajax({
-			url: "/read/datastreams",
+			url: "/arduino/datastreams",
 			type: 'GET',
 			dataType: 'json',
 			cache: true,
@@ -141,8 +147,8 @@
 					} else {
 						var value = "0.0";
 					}
-					if (data['datastreams'][stream]['id'] == 'watts') {
-						document.getElementById("watts").innerHTML = value;
+					if (data['datastreams'][stream]['id'] == 'power') {
+						document.getElementById("power").innerHTML = value;
 					}
 					if (data['datastreams'][stream]['id'] == 'current') {
 						document.getElementById("current").innerHTML = value;
@@ -157,31 +163,36 @@
 							document.getElementById("status").className = "switch on";
 						}
 					}
+				switchControl = document.getElementById("status")
 				}
+				document.getElementById("loading").innerHTML = ""
 			},
 		    });
 		}
 
 		function toggleSwitch() {
+			document.getElementById("loading").innerHTML = "<img width=\"48\" src=\"/sd/loading.gif\" />"
 			switchControl = document.getElementById("status")
 			if (switchControl.className === "switch on") {
 			    $.ajax({
-				url: "/write/switch/1",
+				url: "http://192.168.1.12/arduino/datastreams/switch/1",
 				type: 'GET',
 				dataType: 'json',
 				cache: true,
 				success: function (data) {
 					document.getElementById("status").className = "switch off"
+					document.getElementById("loading").innerHTML = ""
 				}
 			    });
 			} else {
 			    $.ajax({
-				url: "/write/switch/0",
+				url: "http://192.168.1.12/arduino/datastreams/switch/0",
 				type: 'GET',
 				dataType: 'json',
 				cache: true,
 				success: function (data) {
 					document.getElementById("status").className = "switch on"
+					document.getElementById("loading").innerHTML = ""
 				}
 			    });
 			}
@@ -191,8 +202,9 @@
 </head>
 <body onLoad="initialize()">
     <div class="myBox">
+      <div id="loading" class="loading"><img width="48" src="/sd/loading.gif" /></div>
       <ul>
-	<li>Power [W]: <div class="box" id="watts">0.0</div></li>
+	<li>Power [W]: <div class="box" id="power">0.0</div></li>
 	<li>Voltage [V]: <div class="box" id="voltage">0.0</div></li>
 	<li>Current [A]: <div class="box" id="current">0.0</div></li>
 	<li>Status: <div id="status" class="switch off" onClick="toggleSwitch()"><span class="thumb"></span><input type="checkbox" /></div></li>
