@@ -90,6 +90,7 @@ struct settings_t {
   int sensitivity;
   char apikey[49];
   long feedid;
+  char feedsurl[60];
 } 
 settings;
 
@@ -102,6 +103,7 @@ void reset() {
   settings.sensitivity = SENSITIVITY;
   strcpy (settings.apikey,APIKEY);  
   settings.feedid = FEEDID;
+  strcpy (settings.feedsurl,FEEDSURL);  
 }
 
 // rest server
@@ -197,7 +199,7 @@ void sendData() {
   apiString += settings.apikey;
 
   // form the string for the URL parameter:
-  String url = "https://api.xively.com/v2/feeds/";
+  String url = settings.feedsurl;
   url += settings.feedid;
   url += ".csv";
 
@@ -279,6 +281,10 @@ void serParseCommand()
     strncpy(settings.apikey, inputBytes,49);
     settings.apikey[48] = '\0';
   }
+  else if (cmd == 'U') {
+    strncpy(settings.feedsurl, inputBytes,60);
+    settings.feedsurl[59] = '\0';
+  }
   else {
     int value = atoi(inputBytesPtr);
     if (value < 0) {
@@ -331,6 +337,8 @@ void dumpToSerial() {
   Serial.print(sleep);
   Serial.print(",");
   Serial.print(settings.feedid);
+  Serial.print(",");
+  Serial.print(settings.feedsurl);
   Serial.print(",");
   Serial.println(settings.apikey);
 }
