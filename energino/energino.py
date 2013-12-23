@@ -67,7 +67,7 @@ def unpack_energino_yun_v1(line):
     logging.debug("line: %s" % line.replace('\n',''))
     if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
         readings = line[1:-1].split(",")
-        if len(readings) == 10:
+        if len(readings) == 11:
             return { 'voltage' : float(readings[2]), 
                 'current' : float(readings[3]), 
                 'power' : float(readings[4]), 
