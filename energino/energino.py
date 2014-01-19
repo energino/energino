@@ -37,7 +37,8 @@ import serial
 import glob
 import math
 import time
-import datetime
+
+from datetime import datetime
 
 DEFAULT_PORT = '/dev/ttyACM0'
 DEFAULT_PORT_SPEED = 115200
@@ -45,8 +46,15 @@ DEFAULT_INTERVAL = 200
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
 def unpack_energino_v1(line):
-    logging.debug("line: %s" % line.replace('\n',''))
-    if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
+    """ Unpack Energino status line. """
+
+    logging.debug("line: %s", line.replace('\n',''))
+
+    if ( type(line) is str
+         and len(line) > 0
+         and line[0] == "#"
+         and line[-1] == '\n' ):
+
         readings = line[1:-1].split(",")
         if len(readings) == 14:
             return { 'voltage' : float(readings[2]),
@@ -61,11 +69,19 @@ def unpack_energino_v1(line):
                 'host_port' : readings[11],
                 'feed' : readings[12],
                 'key' : readings[13]}
-    raise Exception, "invalid line: %s" % line[0:-1]
+
+    raise ValueError("invalid line: %s" % line[0:-1])
 
 def unpack_energino_yun_v1(line):
-    logging.debug("line: %s" % line.replace('\n',''))
-    if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
+    """ Unpack Energino YUN status line. """
+
+    logging.debug("line: %s", line.replace('\n',''))
+
+    if ( type(line) is str
+         and len(line) > 0
+         and line[0] == "#"
+         and line[-1] == '\n' ):
+
         readings = line[1:-1].split(",")
         if len(readings) == 11:
             return { 'voltage' : float(readings[2]),
@@ -76,76 +92,139 @@ def unpack_energino_yun_v1(line):
                 'samples' : int(readings[7]),
                 'feed' : readings[8],
                 'key' : readings[9]}
-    raise Exception, "invalid line: %s" % line[0:-1]
+
+    raise ValueError("invalid line: %s" % line[0:-1])
 
 MODELS = { "Energino" : { 1 : unpack_energino_v1 },
            "EnerginoYun" : { 1 : unpack_energino_yun_v1 } }
 
 class PyEnergino(object):
+    """ Energino class. """
 
-    def __init__(self, port=DEFAULT_PORT, bps=DEFAULT_PORT_SPEED, interval=DEFAULT_INTERVAL):
+    def __init__(self,
+                 port=DEFAULT_PORT,
+                 bps=DEFAULT_PORT_SPEED,
+                 interval=DEFAULT_INTERVAL):
+
+        self.unpack = None
         self.interval = interval
-        self.ser = serial.Serial(baudrate=bps, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
+        self.ser = serial.Serial(baudrate=bps,
+                                 parity=serial.PARITY_NONE,
+                                 stopbits=serial.STOPBITS_ONE,
+                                 bytesize=serial.EIGHTBITS)
+
         devs = glob.glob(port + "*")
+
         for dev in devs:
-            logging.debug("scanning %s" % dev)
+            logging.debug("scanning %s", dev)
             self.ser.port = dev
             self.ser.open()
             time.sleep(2)
             self.configure()
             self.send_cmds([ "#P%u" % self.interval ])
-            logging.debug("attaching to port %s!" % dev)
+            logging.debug("attaching to port %s!", dev)
             return
-        raise Exception, "unable to configure serial port"
+
+        raise RuntimeError("unable to configure serial port")
 
     def send_cmd(self, cmd):
-        logging.debug("sending initialization sequence %s" % cmd)
+        """ Send command to serial port. """
+
+        logging.debug("sending initialization sequence %s", cmd)
         self.write(cmd + '\n')
         time.sleep(2)
 
     def send_cmds(self, cmds):
+        """ Send command list serial port. """
+
         for cmd in cmds:
             self.send_cmd(cmd)
 
     def configure(self):
+        """ Attempt to configure Energino. """
+
         for _ in range(0, 5):
             line = self.ser.readline()
-            logging.debug("line: %s" % line.replace('\n',''))
-            if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
+            logging.debug("line: %s", line.replace('\n',''))
+
+            if ( type(line) is str
+                 and len(line) > 0
+                 and line[0] == "#"
+                 and line[-1] == '\n' ):
+
                 readings = line[1:-1].split(",")
-                if readings[0] in MODELS.keys() and readings[1].isdigit() and int(readings[1]) in MODELS[readings[0]]:
-                    logging.debug("found %s version %s" % (readings[0], readings[1]))
+
+                if ( readings[0] in MODELS.keys()
+                     and readings[1].isdigit()
+                     and int(readings[1]) in MODELS[readings[0]] ):
+
+                    logging.debug("found %s version %s", readings[0],
+                                                         readings[1] )
+
                     self.unpack = MODELS[readings[0]][int(readings[1])]
                     return
-        raise Exception, "unable to identify model: %s" % line
+
+        raise RuntimeError("unable to identify model: %s" % line)
 
     def write(self, value):
+        """ Write to serial port and flush. """
+
         self.ser.flushOutput()
         self.ser.write(value)
 
     def fetch(self, field = None):
+        """ Read from serial port. """
+
         readings = self.unpack(self.ser.readline())
         readings['port'] = self.ser.port
-        readings['at'] = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        readings['at'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         delta = math.fabs(self.interval - readings['window'])
+
         if delta / self.interval > 0.1:
-            logging.debug("polling drift is higher than 10%%, target is %u actual is %u" % (self.interval, readings['window']))
+            logging.debug("Target polling %u actual %u", self.interval,
+                                                         readings['window'] )
+
         if field != None:
             return readings[field]
+
         return readings
 
 def main():
+    """ Launcher method. """
 
-    p = optparse.OptionParser()
-    p.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
-    p.add_option('--interval', '-i', dest="interval", type="int", default=DEFAULT_INTERVAL)
-    p.add_option('--offset', '-o', dest="offset", type="int", default=None)
-    p.add_option('--sensitivity', '-s', dest="sensitivity", type="int", default=None)
-    p.add_option('--bps', '-b', dest="bps", type="int", default=DEFAULT_PORT_SPEED)
-    p.add_option('--matlab', '-t', dest="matlab")
-    p.add_option('--verbose', '-v', action="store_true", dest="verbose", default=False)
-    p.add_option('--log', '-l', dest="log")
-    options, _ = p.parse_args()
+    parser = optparse.OptionParser()
+
+    parser.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
+    parser.add_option('--interval', '-i',
+                      dest="interval",
+                      type="int",
+                      default=DEFAULT_INTERVAL)
+
+    parser.add_option('--offset', '-o',
+                      dest="offset",
+                      type="int",
+                      default=None)
+
+    parser.add_option('--sensitivity', '-s',
+                      dest="sensitivity",
+                      type="int",
+                      default=None)
+
+    parser.add_option('--bps', '-b',
+                      dest="bps",
+                      type="int",
+                      default=DEFAULT_PORT_SPEED)
+
+    parser.add_option('--matlab', '-t', dest="matlab")
+
+    parser.add_option('--verbose', '-v',
+                      action="store_true",
+                      dest="verbose",
+                      default=False)
+
+    parser.add_option('--log', '-l', dest="log")
+
+    options, _ = parser.parse_args()
     init = []
 
     if options.offset != None:
@@ -158,7 +237,10 @@ def main():
     else:
         lvl = logging.INFO
 
-    logging.basicConfig(level=lvl, format=LOG_FORMAT, filename=options.log, filemode='w')
+    logging.basicConfig(level=lvl,
+                        format=LOG_FORMAT,
+                        filename=options.log,
+                        filemode='w')
 
     energino = PyEnergino(options.port, options.bps, options.interval)
     energino.send_cmds(init)
@@ -176,15 +258,26 @@ def main():
         except:
             logging.debug("0 [V] 0 [A] 0 [W] 0 [samples] 0 [window]")
         else:
+
+            line = ( readings['voltage'],
+                     readings['current'],
+                     readings['power'],
+                     readings['samples'],
+                     readings['window'] )
+
             if options.matlab != None:
-                mat.append((readings['voltage'], readings['current'], readings['power'], readings['samples'], readings['window']))
-            logging.info("%s [V] %s [A] %s [W] %s [samples] %s [window]" % (readings['voltage'], readings['current'], readings['power'], readings['samples'], readings['window']))
+                mat.append(line)
+
+            log = "%s [V] %s [A] %s [W] %s [samples] %s [window]" % line
+
+            logging.info(log)
 
         if options.matlab != None:
             import numpy as np
             import scipy.io
-            scipy.io.savemat(options.matlab, { 'READINGS' : np.array(mat) }, oned_as = 'column')
+            scipy.io.savemat(options.matlab,
+                             { 'READINGS' : np.array(mat) },
+                             oned_as = 'column')
 
 if __name__ == "__main__":
     main()
-
