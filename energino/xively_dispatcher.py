@@ -45,17 +45,17 @@ DEFAULT_PORT = 80
 DEFAULT_PERIOD = 10
 
 LOG_FORMAT = '%(asctime)-15s %(message)s'
-    
-BACKOFF = 60  
+
+BACKOFF = 60
 
 class DispatcherProcedure(threading.Thread):
-    
+
     def __init__(self, dispatcher):
         super(DispatcherProcedure, self).__init__()
         self.daemon = True
         self.dispatcher = dispatcher
         self.stop = threading.Event()
-        self.outgoing = deque() 
+        self.outgoing = deque()
         self.lock = threading.Lock()
         self.streams = {}
 
@@ -90,7 +90,7 @@ class DispatcherProcedure(threading.Thread):
                 readings = self.outgoing.popleft()
                 pending.append(readings)
                 for stream in self.streams.values():
-                    stream['current_value'] = readings[stream['id']] 
+                    stream['current_value'] = readings[stream['id']]
                     stream['datapoints'].append({ "at" :  readings['at'], "value" :  "%.3f" % readings[stream['id']] })
             for stream in self.streams.values():
                 feed['datastreams'].append(stream)
@@ -99,7 +99,7 @@ class DispatcherProcedure(threading.Thread):
             conn = httplib.HTTPConnection(host=self.dispatcher.host, port=self.dispatcher.port, timeout=10)
             conn.request('PUT', "/v2/feeds/%s" % self.dispatcher.feed, json.dumps(feed), { 'X-ApiKey' : self.dispatcher.key })
             resp = conn.getresponse()
-            conn.close() 
+            conn.close()
             if resp.status != 200:
                 logging.error("%s (%s), rolling back %u updates" % (resp.reason, resp.status, len(pending)))
                 self.dispatcher.discover()
@@ -109,7 +109,7 @@ class DispatcherProcedure(threading.Thread):
             logging.error("exception %s, rolling back %u updates" % (str(e), len(pending)))
             while pending:
                 self.outgoing.appendleft(pending.pop())
-        
+
     def enqueue(self, readings, send = False):
         with self.lock:
             self.outgoing.append(readings)
@@ -130,18 +130,18 @@ class XivelyDispatcher(threading.Thread):
         self.loadConfig()
         self.dispatcher = DispatcherProcedure(self)
         self.streams = {}
-        
+
     def add_stream(self, stream, si, label, symbol):
         self.streams[stream] = { 'si' : si, 'label' : label, 'symbol' : symbol }
 
     def start(self):
-        
+
         # start dispatcher
-        
+
         for stream in self.streams:
             self.dispatcher.add_stream(stream, self.streams[stream]['si'], self.streams[stream]['label'], self.streams[stream]['symbol'])
         self.dispatcher.start()
-        
+
         # start pool loop
         while True:
             try:
@@ -161,14 +161,14 @@ class XivelyDispatcher(threading.Thread):
                 logging.exception("exception, backing off for %u seconds" % BACKOFF)
                 time.sleep(BACKOFF)
         # thread stopped
-        logging.info("thread %s stopped" % self.__class__.__name__) 
+        logging.info("thread %s stopped" % self.__class__.__name__)
 
 
     def shutdown(self):
         logging.info("shutting down dispatcher")
         self.dispatcher.shutdown()
         self.stop.set()
-        
+
     def getJsonFeed(self):
         return {
           "version" : "1.0.0",
@@ -184,16 +184,16 @@ class XivelyDispatcher(threading.Thread):
             "domain" : self.domain,
             "name" : self.name
           }
-        }        
-            
+        }
+
     def loadConfig(self):
-        
-        config = ConfigParser.SafeConfigParser({'host' : DEFAULT_HOST, 
-                                                'port' : DEFAULT_PORT, 
+
+        config = ConfigParser.SafeConfigParser({'host' : DEFAULT_HOST,
+                                                'port' : DEFAULT_PORT,
                                                 'feed' : '',
                                                 'key' : '-',
-                                                'period' : DEFAULT_PERIOD, 
-                                                'website' : '', 
+                                                'period' : DEFAULT_PERIOD,
+                                                'website' : '',
                                                 'disposition' : 'fixed',
                                                 'name':'',
                                                 'lat':"0.0",
@@ -201,9 +201,9 @@ class XivelyDispatcher(threading.Thread):
                                                 'lon':"0.0",
                                                 'domain':'physical',
                                                 'tags':''})
-        
+
         config.read(self.config)
-        
+
         if not config.has_section("General"):
             config.add_section("General")
 
@@ -215,7 +215,7 @@ class XivelyDispatcher(threading.Thread):
 
         if not config.has_section("Location"):
             config.add_section("Location")
-            
+
         self.website = config.get("Location", "website")
         self.disposition = config.get("Location", "disposition")
         self.name = config.get("Location", "name")
@@ -236,7 +236,7 @@ class XivelyDispatcher(threading.Thread):
 
         logging.info("period: %s" % self.period)
         logging.info("website: %s" % self.website)
-        
+
         logging.info("disposition: %s" % self.disposition)
         logging.info("name: %s" % self.name)
         logging.info("lat: %s" % self.lat)
@@ -244,9 +244,9 @@ class XivelyDispatcher(threading.Thread):
         logging.info("lon: %s" % self.lon)
         logging.info("domain: %s" % self.domain)
         logging.info("tags: %s" % self.tags)
-        
+
         if self.key is None:
-            raise Exception("invalid key") 
+            raise Exception("invalid key")
 
         self.saveState()
 
@@ -258,7 +258,7 @@ class XivelyDispatcher(threading.Thread):
             conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=10)
             conn.request('GET', "/v2/feeds/%s" % self.feed, headers={'X-ApiKey': self.key})
             resp = conn.getresponse()
-            conn.close() 
+            conn.close()
             if resp.status == 200:
                 # feed found
                 logging.info("feed %s found!" % self.feed)
@@ -272,7 +272,7 @@ class XivelyDispatcher(threading.Thread):
         conn = httplib.HTTPConnection(host=self.host, port=self.port, timeout=10)
         conn.request('POST', '/v2/feeds/', json.dumps(self.getJsonFeed()), {'X-ApiKey': self.key})
         resp = conn.getresponse()
-        conn.close()        
+        conn.close()
 
         if resp.status == 201:
             self.feed = resp.getheader('location').split("/")[-1]
@@ -280,23 +280,23 @@ class XivelyDispatcher(threading.Thread):
         else:
             self.feed = None
             raise Exception("error while creating feed, %s (%s)" % (resp.reason, resp.status))
-        
+
         self.saveState()
-        
+
     def saveState(self):
-                
+
         # update configuration file
         config = ConfigParser.SafeConfigParser()
-        
+
         config.add_section("General")
         config.set("General", "key", self.key)
         config.set("General", "host", self.host)
         config.set("General", "port", str(self.port))
         config.set("General", "period", str(self.period))
-        
+
         if not self.feed is None:
             config.set("General", "feed", self.feed)
-            
+
         config.add_section("Location")
         config.set("Location", "website", self.website)
         config.set("Location", "disposition", self.disposition)
@@ -306,5 +306,5 @@ class XivelyDispatcher(threading.Thread):
         config.set("Location", "lon", str(self.lon))
         config.set("Location", "domain", self.domain)
         config.set("Location", "tags", ",".join(self.tags))
-        
-        config.write(open(self.config,"w"))        
+
+        config.write(open(self.config,"w"))

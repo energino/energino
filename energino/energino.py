@@ -26,12 +26,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-A command line utility for interfacing with the energino power 
+A command line utility for interfacing with the energino power
 consumption monitor.
 """
 
 import optparse
-import logging 
+import logging
 import sys
 import serial
 import glob
@@ -49,17 +49,17 @@ def unpack_energino_v1(line):
     if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
         readings = line[1:-1].split(",")
         if len(readings) == 14:
-            return { 'voltage' : float(readings[2]), 
-                'current' : float(readings[3]), 
-                'power' : float(readings[4]), 
-                'switch' : int(readings[5]), 
-                'window' : int(readings[6]), 
-                'samples' : int(readings[7]), 
-                'ip' : readings[8], 
-                'server_port' : readings[9], 
-                'host' : readings[10], 
-                'host_port' : readings[11], 
-                'feed' : readings[12], 
+            return { 'voltage' : float(readings[2]),
+                'current' : float(readings[3]),
+                'power' : float(readings[4]),
+                'switch' : int(readings[5]),
+                'window' : int(readings[6]),
+                'samples' : int(readings[7]),
+                'ip' : readings[8],
+                'server_port' : readings[9],
+                'host' : readings[10],
+                'host_port' : readings[11],
+                'feed' : readings[12],
                 'key' : readings[13]}
     raise Exception, "invalid line: %s" % line[0:-1]
 
@@ -68,13 +68,13 @@ def unpack_energino_yun_v1(line):
     if type(line) is str and len(line) > 0 and line[0] == "#" and line[-1] == '\n':
         readings = line[1:-1].split(",")
         if len(readings) == 11:
-            return { 'voltage' : float(readings[2]), 
-                'current' : float(readings[3]), 
-                'power' : float(readings[4]), 
-                'switch' : int(readings[5]), 
-                'window' : int(readings[6]), 
-                'samples' : int(readings[7]), 
-                'feed' : readings[8], 
+            return { 'voltage' : float(readings[2]),
+                'current' : float(readings[3]),
+                'power' : float(readings[4]),
+                'switch' : int(readings[5]),
+                'window' : int(readings[6]),
+                'samples' : int(readings[7]),
+                'feed' : readings[8],
                 'key' : readings[9]}
     raise Exception, "invalid line: %s" % line[0:-1]
 
@@ -104,9 +104,9 @@ class PyEnergino(object):
         time.sleep(2)
 
     def send_cmds(self, cmds):
-        for cmd in cmds:           
+        for cmd in cmds:
             self.send_cmd(cmd)
-                
+
     def configure(self):
         for _ in range(0, 5):
             line = self.ser.readline()
@@ -133,7 +133,7 @@ class PyEnergino(object):
         if field != None:
             return readings[field]
         return readings
-                
+
 def main():
 
     p = optparse.OptionParser()
@@ -143,26 +143,26 @@ def main():
     p.add_option('--sensitivity', '-s', dest="sensitivity", type="int", default=None)
     p.add_option('--bps', '-b', dest="bps", type="int", default=DEFAULT_PORT_SPEED)
     p.add_option('--matlab', '-t', dest="matlab")
-    p.add_option('--verbose', '-v', action="store_true", dest="verbose", default=False)   
+    p.add_option('--verbose', '-v', action="store_true", dest="verbose", default=False)
     p.add_option('--log', '-l', dest="log")
     options, _ = p.parse_args()
     init = []
-    
+
     if options.offset != None:
         init.append("#C%u" % options.offset)
     if options.sensitivity != None:
         init.append("#D%u" % options.sensitivity)
-        
+
     if options.verbose:
         lvl = logging.DEBUG
     else:
         lvl = logging.INFO
-    
+
     logging.basicConfig(level=lvl, format=LOG_FORMAT, filename=options.log, filemode='w')
-    
+
     energino = PyEnergino(options.port, options.bps, options.interval)
     energino.send_cmds(init)
-    
+
     if options.matlab != None:
         mat = []
 
@@ -184,7 +184,7 @@ def main():
             import numpy as np
             import scipy.io
             scipy.io.savemat(options.matlab, { 'READINGS' : np.array(mat) }, oned_as = 'column')
-    
+
 if __name__ == "__main__":
     main()
-    
+
