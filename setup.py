@@ -35,7 +35,7 @@ if sys.version < '2.7':
     raise ValueError("Sorry Python versions older than 2.7 are not supported")
 
 setup(name="energino",
-      version="0.1",
+      version="0.2",
       description="PyEnergino",
       author="Roberto Riggio",
       author_email="roberto.riggio@create-net.org",
