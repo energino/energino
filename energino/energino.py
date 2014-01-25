@@ -40,12 +40,33 @@ import time
 
 from datetime import datetime
 
-DEFAULT_PORT = '/dev/ttyACM0'
-DEFAULT_PORT_SPEED = 115200
+DEFAULT_DEVICE = '/dev/ttyACM'
+DEFAULT_DEVICE_SPEED_BPS = 115200
 DEFAULT_INTERVAL = 200
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
 def unpack_energino_v1(line):
+    """ Unpack Energino status line. """
+
+    logging.debug("line: %s", line.replace('\n',''))
+
+    if ( type(line) is str
+         and len(line) > 0
+         and line[0] == "#"
+         and line[-1] == '\n' ):
+
+        readings = line[1:-1].split(",")
+        if len(readings) == 8:
+            return { 'voltage' : float(readings[2]),
+                'current' : float(readings[3]),
+                'power' : float(readings[4]),
+                'switch' : int(readings[5]),
+                'window' : int(readings[6]),
+                'samples' : int(readings[7]) }
+
+    raise ValueError("invalid line: %s" % line[0:-1])
+
+def unpack_energino_ethernet_v1(line):
     """ Unpack Energino status line. """
 
     logging.debug("line: %s", line.replace('\n',''))
@@ -96,14 +117,15 @@ def unpack_energino_yun_v1(line):
     raise ValueError("invalid line: %s" % line[0:-1])
 
 MODELS = { "Energino" : { 1 : unpack_energino_v1 },
+           "EnerginoEthernet" : { 1 : unpack_energino_ethernet_v1 },
            "EnerginoYun" : { 1 : unpack_energino_yun_v1 } }
 
 class PyEnergino(object):
     """ Energino class. """
 
     def __init__(self,
-                 port=DEFAULT_PORT,
-                 bps=DEFAULT_PORT_SPEED,
+                 port=DEFAULT_DEVICE,
+                 bps=DEFAULT_DEVICE_SPEED_BPS,
                  interval=DEFAULT_INTERVAL):
 
         self.unpack = None
@@ -194,7 +216,7 @@ def main():
 
     parser = optparse.OptionParser()
 
-    parser.add_option('--port', '-p', dest="port", default=DEFAULT_PORT)
+    parser.add_option('--port', '-p', dest="port", default=DEFAULT_DEVICE)
     parser.add_option('--interval', '-i',
                       dest="interval",
                       type="int",
@@ -213,7 +235,7 @@ def main():
     parser.add_option('--bps', '-b',
                       dest="bps",
                       type="int",
-                      default=DEFAULT_PORT_SPEED)
+                      default=DEFAULT_DEVICE_SPEED_BPS)
 
     parser.add_option('--matlab', '-t', dest="matlab")
 

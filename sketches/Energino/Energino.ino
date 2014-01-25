@@ -20,26 +20,9 @@
  *  #C<integer>, sets the offset in mV of the current sensor [default is 2500]
  *  #D<integer>, sets the sensitivity in mV of the current sensor [default is 185]
  *  #R, resest the configuration to the defaults
- *  #F<feed>, sets the feed id [default is 0]
- *  #K<key>, sets the COSM authentication key [default is -]
- *  #H, sets the remote host ip address [default is 216.52.233.121 (Cosm)]
- *  #O, sets the remote host port [default is 80]
- *
- * No updates are sent over the Ethernet interface if the feed id is set to 0
  *
  * Serial putput:
- *   #Energino,0,<voltage>,<current>,<power>,<relay>,<period>,<samples>,<ip>,<port>,<host>,<port>,<feed>,<key>
- *
- * RESTful interface: 
- *  This sketch accepts HTTP requests in the form GET /<cmd>/<param>/[value], where "cmd" 
- *  can be either "read" or "write", param is one of the following parameters:
- *   datastreams [read]
- *   switch [read|write]
- *  Examples: 
- *   GET http://<ipaddress>/read/datastreams
- *   GET http://<ipaddress>/read/switch
- *   GET http://<ipaddress>/write/switch/0
- *   GET http://<ipaddress>/write/switch/1
+ *   #Energino,0,<voltage>,<current>,<power>,<relay>,<period>,<samples>
  *
  * created 31 October 2012
  * by Roberto Riggio
@@ -48,30 +31,12 @@
  *
  */
 
-#include <SPI.h>
-#include <SD.h>
-#include <Ethernet.h>
 #include <EEPROM.h>
 #include <avr/eeprom.h>
 
-// comment/uncomment to disable/enable debug
-//#define DEBUG
-
-// comment/uncomment to disable/enable ethernet support
-#define NOETH
-
-#define RELAY_PIN 2
-
-#ifdef DEBUG
-#define DBG if(1) 
-#else
-#define DBG if(0) 
-#endif
-
-// Feed id
-long FEED = 0;
-// Cosm key
-char KEY[] = "-";
+#define RELAYPIN      2
+#define CURRENTPIN    A0
+#define VOLTAGEPIN    A1
 
 // Energino parameters
 int R1 = 100;
@@ -88,28 +53,6 @@ long delta = 0;
 float VFinal = 0.0;
 float IFinal = 0.0;
 
-#ifndef NOETH
-
-// Cosm configuration
-IPAddress HOST(216,52,233,121);
-long PORT = 80;
-
-// Server configuration parameters, energino will listen for
-// incoming requests on this port
-const long SERVER_PORT = 8180;
-
-// HTML response
-const char HTML_RESPONSE[43] PROGMEM = "HTTP/1.1 200 OK\nContent-Type: text/html\n\n";
-const char HTML_RESPONSE_404[25] PROGMEM = "HTTP/1.1 404 Not Found\n\n";
-
-// JSON response header and footer
-const char JSON_RESPONSE[49] PROGMEM = "HTTP/1.1 200 OK\nContent-Type: application/json\n\n";
-
-// working vars
-EthernetServer server(SERVER_PORT);
-
-#endif
-
 // magic string
 const char MAGIC[] = "Energino";
 const int REVISION = 1;
@@ -117,16 +60,11 @@ const int REVISION = 1;
 // Permanent configuration
 struct settings_t {
   char magic[9];
-  long period;
   int r1;
   int r2;
   int offset;
   int sensitivity;
-  byte mac[6];
-  char apikey[49];
-  long feed;
-  IPAddress host;
-  long port;
+  int period;
 } 
 settings;
 
@@ -137,27 +75,14 @@ void reset() {
   settings.r2 = R2;
   settings.offset = OFFSET;
   settings.sensitivity = SENSITIVITY;
-#ifndef NOETH
-  settings.feed = FEED;
-  settings.host = HOST;
-  settings.port = PORT;
-  strcpy (settings.apikey,KEY);  
-  settings.mac[0] = 0x90;
-  settings.mac[1] = 0xA2;
-  settings.mac[2] = 0xDA;
-  for (int i = 3; i < 6; i++) {
-    randomSeed(analogRead(0));
-    settings.mac[i] = random(0, 255);
-  }
-#endif
 }
 
 void setup() {
   // Set serial port
   Serial.begin(115200); 
   // Default on
-  pinMode(RELAY_PIN,OUTPUT);
-  digitalWrite(RELAY_PIN, LOW);
+  pinMode(RELAYPIN,OUTPUT);
+  digitalWrite(RELAYPIN, LOW);
   // Loading setting 
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
   if (strcmp(settings.magic, MAGIC) != 0) {
@@ -166,34 +91,9 @@ void setup() {
   }
   // set sleep counter
   resetSleep(settings.period);
-#ifndef NOETH
-  // Try to configure the ethernet using DHCP
-  Serial.println("@dhcp");
-  if (Ethernet.begin(settings.mac) == 0) {
-    Serial.println("@dhcp: fail");
-    return;
-  }
-  Serial.println("@dhcp done");
-  // Start server
-  server.begin();
-  // Init SD
-  pinMode(10, OUTPUT);
-  // see if the card is present and can be initialized:
-  if (!SD.begin(4)) {
-    Serial.println("@sd: fail");
-    return;
-  }
-#endif
 }
 
 void loop() {
-
-  // Make sure that update period is not too high
-#ifndef NOETH
-  if ((settings.feed != 0) && (settings.period < 2000)) {
-    resetSleep(2000);
-  }
-#endif
 
   // Start profiling
   long started = millis();
@@ -201,29 +101,19 @@ void loop() {
   // Parse incoming commands
   serParseCommand();
 
-  // Listen for incoming requests
-#ifndef NOETH
-  handleRequests();
-#endif
-
   // Instant values are too floating,
   // let's smooth them up
   long VRaw = 0;
   long IRaw = 0;
 
   for(long i = 0; i < sleep; i++) {
-    VRaw += analogRead(A1);
-    IRaw += analogRead(A0);
+    VRaw += analogRead(VOLTAGEPIN);
+    IRaw += analogRead(CURRENTPIN);
   }
 
   // Conversion
   VFinal = scaleVoltage((float)VRaw/sleep);
   IFinal = scaleCurrent((float)IRaw/sleep);
-
-  // send data to remote host
-#ifndef NOETH
-  sendData();
-#endif
 
   // dump to serial
   dumpToSerial();
@@ -276,33 +166,6 @@ void serParseCommand()
   if (cmd == 'R') {
     reset();
   }
-#ifndef NOETH
-  else if (cmd == 'F') {
-    long value = atol(inputBytesPtr);
-    if (value >= 0) {
-      settings.feed = value;
-    }
-  } 
-  else if (cmd == 'K') {
-    strncpy(settings.apikey, inputBytes,49);
-    settings.apikey[48] = '\0';
-  }
-  else if (cmd == 'H') {
-    byte host[4];
-    char *p = strtok(inputBytes, ".");  
-    for (int i = 0; i < 4; i++) {
-      host[i] = atoi(p);
-      p = strtok(NULL, ".");
-    }
-    settings.host=IPAddress(host);
-  }  
-  else if (cmd == 'O') {
-    long value = atol(inputBytesPtr);
-    if (value > 0) {
-      settings.port = value;
-    }
-  }   
-#endif
   else {
     int value = atoi(inputBytesPtr);
     if (value < 0) {
@@ -325,162 +188,15 @@ void serParseCommand()
     }
     else if (cmd == 'S') {
       if (value > 0) {
-        digitalWrite(RELAY_PIN, HIGH);
+        digitalWrite(RELAYPIN, HIGH);
       } 
       else {
-        digitalWrite(RELAY_PIN, LOW);
+        digitalWrite(RELAYPIN, LOW);
       }
     } 
   }
   eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings)); 
 }
-
-#ifndef NOETH
-
-// This method accepts HTTP requests in the form GET /<cmd>/<param>/[value]
-void handleRequests() {
-  EthernetClient request = server.available();
-  if (request) {
-    int idx = 0;
-    char buffer[50];
-    while (request.connected() && request.available()) {
-      // Read char by char HTTP request
-      char c = request.read();
-      DBG Serial.print(c);
-      // Store characters to string
-      if (idx < 50) {
-        buffer[idx] = c;
-      }
-      idx++;
-      // If you've gotten to the end of the line (received a newline
-      // character) the http request has ended, so you can send a reply
-      if (c == '\n' || idx >= 50) {
-        char * method;
-        method = strtok (buffer, " ");
-        if (strcmp(method, "GET") == 0) {
-          char * toks;
-          toks = strtok (NULL," ");
-          toks = strtok (toks,"/");
-          if (strcmp(toks, "read") == 0) {
-            toks = strtok (NULL, "/");
-            if (strcmp(toks, "datastreams") == 0) {
-              writeHeader(request, JSON_RESPONSE);
-              writeDataStream(request);
-              break;
-            } 
-            else if (strcmp(toks, "switch") == 0) {
-              writeHeader(request, JSON_RESPONSE);
-              request.print("[");
-              request.print(digitalRead(RELAY_PIN));
-              request.print("]\n");
-              break;
-            } 
-          } 
-          else if (strcmp(toks, "write") == 0) {
-            toks = strtok (NULL, "/");
-            if (strcmp(toks, "switch") == 0) {
-              toks = strtok (NULL, "/");
-              if (atoi(toks) > 0) {
-                digitalWrite(RELAY_PIN, HIGH);
-              } 
-              else { 
-                digitalWrite(RELAY_PIN, LOW);
-              }
-              writeHeader(request, JSON_RESPONSE);
-              request.print("[");
-              request.print(digitalRead(RELAY_PIN));
-              request.print("]\n");
-              break;
-            } 
-          }
-          else {
-            File dataFile = SD.open(toks, FILE_READ);
-            if (dataFile) {
-              writeHeader(request, HTML_RESPONSE);
-              while (dataFile.available()) {
-                request.write(dataFile.read());
-              }
-              dataFile.close();
-              request.write("\n");
-              break;
-            } 
-          }
-        }
-        writeHeader(request, HTML_RESPONSE_404);
-        request.write("\n");
-        break;
-      }
-    }
-    // give the web browser time to receive the data
-    delay(10);
-    // close the connection:
-    request.stop();
-  }
-}
-
-// this method makes a HTTP connection to the server
-void sendData() {
-  // check if the feed has been initialized
-  if (settings.feed == 0) {
-    return;
-  }
-  // try to connect
-  EthernetClient client;    
-  int ret = client.connect(settings.host, settings.port);
-  if (ret == 1) {
-    // build json document
-    DBG Serial.print("PUT /v2/feeds/");
-    DBG Serial.println(settings.feed);
-    // send the HTTP PUT request. 
-    client.print("PUT /v2/feeds/");
-    client.print(settings.feed);
-    client.print(" HTTP/1.1\n");
-    client.print("X-PachubeApiKey: ");
-    client.println(settings.apikey);
-    client.print("User-Agent: ");
-    client.println(MAGIC);    
-    client.print("Content-Type: application/json\n");
-    client.print("\n");
-    // here's the actual content of the PUT request:
-    writeDataStream(client);
-    delay(1000);
-    // if there are incoming bytes available 
-    // from the server, read them and print them:
-    while (client.available()) {
-      char c = client.read();
-      DBG Serial.print(c);
-    }
-    DBG Serial.print("\n");
-    client.stop();
-  }
-}
-
-void writeHeader(EthernetClient &request, const char * data) {
-  while (pgm_read_byte(data) != 0x00) {
-    request.write(pgm_read_byte(data++));             
-  }
-}
-
-void writeDataStream(EthernetClient &request) {
-  char r[10];
-  request.print("{\"version\":\"1.0.0\",");
-  request.print("\"datastreams\":[");
-  request.print("{\"id\":\"current\",\"current_value\":");
-  request.print(dtostrf (IFinal, 5, 3, r));
-  request.print("},");
-  request.print("{\"id\":\"voltage\",\"current_value\":");
-  request.print(dtostrf (VFinal, 5, 3, r));
-  request.print("},");
-  request.print("{\"id\":\"watts\",\"current_value\":");
-  request.print(dtostrf (VFinal * IFinal, 5, 3, r));
-  request.print("},");
-  request.print("{\"id\":\"switch\", \"current_value\":");
-  request.print(itoa(digitalRead(RELAY_PIN),r,10));
-  request.print("}");
-  request.print("]}");
-}
-
-#endif
 
 void dumpToSerial() {
   // Print data also on the serial
@@ -495,46 +211,12 @@ void dumpToSerial() {
   Serial.print(",");
   Serial.print(VFinal * IFinal,3);
   Serial.print(",");
-  Serial.print(digitalRead(RELAY_PIN));
+  Serial.print(digitalRead(RELAYPIN));
   Serial.print(",");
   Serial.print(delta);
   Serial.print(",");
   Serial.print(sleep);
-#ifdef NOETH
-  Serial.print(",");
-  Serial.print("-");
-  Serial.print(",");
-  Serial.print("-");
-  Serial.print(",");
-  Serial.print("-");
-  Serial.print(",");
-  Serial.print("-");
-  Serial.print(",");
-  Serial.print("-");
-  Serial.print(",");
-  Serial.print("-");
-#else
-  Serial.print(",");
-  Serial.print(Ethernet.localIP());
-  Serial.print(",");
-  Serial.print(SERVER_PORT);
-  Serial.print(",");
-  for (byte thisByte = 0; thisByte < 4; thisByte++) {
-    // print the value of each byte of the IP address:
-    Serial.print(settings.host[thisByte], DEC);
-    if (thisByte < 3) {
-      Serial.print(".");
-    }
-  }
-  Serial.print(",");
-  Serial.print(settings.port);
-  Serial.print(",");
-  Serial.print(settings.feed);
-  Serial.print(",");
-  Serial.print(settings.apikey);
-#endif
   Serial.print("\n");  
-
 }
 
 float scaleVoltage(float voltage) {
