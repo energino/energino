@@ -112,7 +112,8 @@ def unpack_energino_yun_v1(line):
                 'window' : int(readings[6]),
                 'samples' : int(readings[7]),
                 'feed' : readings[8],
-                'key' : readings[9]}
+                'url' : readings[9],
+                'key' : readings[10] }
 
     raise ValueError("invalid line: %s" % line[0:-1])
 

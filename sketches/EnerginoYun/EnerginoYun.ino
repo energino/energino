@@ -27,7 +27,7 @@
  * No updates are sent over the Ethernet interface if the feed id is set to 0
  *
  * Serial putput:
- *   #Energino,0,<voltage>,<current>,<power>,<relay>,<period>,<samples>,<feed>,<key>
+ *   #Energino,0,<voltage>,<current>,<power>,<relay>,<period>,<samples>,<feed>,<url>,<key>
  *
  * RESTful interface: 
  *   Reading:
