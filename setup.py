@@ -24,6 +24,9 @@
 # ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+""" Setup script. """
+
 import sys
 
 try:
@@ -41,8 +44,8 @@ setup(name="energino",
       author_email="roberto.riggio@create-net.org",
       url="https://github.com/rriggio/energino",
       long_description="Energino distributed energy monitoring toolkit",
-      entry_points={ "console_scripts":["energino = energino.energino:main"] },
+      entry_points={"console_scripts":["energino = energino.energino:main"]},
       packages=['energino'],
-      license = "Python",
+      license="Python",
       platforms="any"
 )

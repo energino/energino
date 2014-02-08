@@ -89,11 +89,11 @@ class DispatcherProcedure(threading.Thread):
     def add_stream(self, stream, si_type, label, symbol):
         """ Add a new datastream. """
 
-        self.streams[stream] = { "id" : stream,
-                                 "datapoints" : [],
-                                 "unit": { "type": si_type,
-                                           "label": label,
-                                           "symbol": symbol } }
+        self.streams[stream] = {"id" : stream,
+                                "datapoints" : [],
+                                "unit": {"type": si_type,
+                                         "label": label,
+                                         "symbol": symbol}}
 
     def process(self):
         """ Update feed. """
@@ -112,15 +112,15 @@ class DispatcherProcedure(threading.Thread):
                 pending.append(readings)
                 for stream in self.streams.values():
                     stream['current_value'] = readings[stream['id']]
-                    sample = { "at" : readings['at'],
-                               "value" :  "%.3f" % readings[stream['id']] }
+                    sample = {"at" : readings['at'],
+                              "value" :  "%.3f" % readings[stream['id']]}
                     stream['datapoints'].append(sample)
             for stream in self.streams.values():
                 feed['datastreams'].append(stream)
 
         feed_id = self.dispatcher.config['feed']
         logging.info("updating feed %s, sending %s samples", feed_id,
-                                                             len(pending) )
+                                                             len(pending))
         try:
 
             conn = httplib.HTTPConnection(host=self.dispatcher.config['host'],
@@ -129,7 +129,7 @@ class DispatcherProcedure(threading.Thread):
 
             conn.request('PUT', "/v2/feeds/%s" % feed_id,
                          json.dumps(feed),
-                         { 'X-ApiKey' : self.dispatcher.config['key'] })
+                         {'X-ApiKey' : self.dispatcher.config['key']})
 
             resp = conn.getresponse()
             conn.close()
@@ -143,10 +143,10 @@ class DispatcherProcedure(threading.Thread):
                 while pending:
                     self.outgoing.appendleft(pending.pop())
 
-        except Exception as ex:
+        except httplib.HTTPError as ex:
 
             logging.exception(ex)
-            logging.error("exception, rolling back %u updates", len(pending) )
+            logging.error("exception, rolling back %u updates", len(pending))
 
             while pending:
                 self.outgoing.appendleft(pending.pop())
@@ -166,7 +166,7 @@ class XivelyDispatcher(threading.Thread):
         self.daemon = True
         self.stop = threading.Event()
         self.config_file = config_file
-        self.config = { 'uuid' : uuid, 'backend' : backend }
+        self.config = {'uuid' : uuid, 'backend' : backend}
         self.load_config()
         self.dispatcher = DispatcherProcedure(self)
         self.streams = {}
@@ -174,9 +174,9 @@ class XivelyDispatcher(threading.Thread):
     def add_stream(self, stream, unit_type, label, symbol):
         """ Add a new stream to the Xively client. """
 
-        self.streams[stream] = { 'unit_type' : unit_type,
-                                 'label' : label,
-                                 'symbol' : symbol }
+        self.streams[stream] = {'unit_type' : unit_type,
+                                'label' : label,
+                                'symbol' : symbol}
 
     def start(self):
 
@@ -316,7 +316,7 @@ class XivelyDispatcher(threading.Thread):
 
             conn.request('GET', "/v2/feeds/%s" %
                          self.config['feed'],
-                         headers = {'X-ApiKey': self.config['key']})
+                         headers={'X-ApiKey' : self.config['key']})
 
             resp = conn.getresponse()
             conn.close()
@@ -358,7 +358,7 @@ class XivelyDispatcher(threading.Thread):
         config.set("Location", "domain", self.config['domain'])
         config.set("Location", "tags", ",".join(self.config['tags']))
 
-        config.write(open(self.config,"w"))
+        config.write(open(self.config, "w"))
 
 def sigint_handler(*_):
     """ Handle SIGINT. """
