@@ -42,10 +42,10 @@ import json
 
 from collections import deque
 
-from energino import PyEnergino
-from energino import DEFAULT_INTERVAL
-from energino import DEFAULT_DEVICE
-from energino import DEFAULT_DEVICE_SPEED_BPS
+from energino.energino import PyEnergino
+from energino.energino import DEFAULT_INTERVAL
+from energino.energino import DEFAULT_DEVICE
+from energino.energino import DEFAULT_DEVICE_SPEED_BPS
 
 DEFAULT_CONFIG = '/etc/xively.conf'
 
