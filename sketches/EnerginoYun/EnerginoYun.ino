@@ -21,7 +21,7 @@
  *  #D<integer>, sets the sensitivity in mV of the current sensor [default is 185]
  *  #R, resest the configuration to the defaults
  *  #F<feed>, sets the feed id [default is 0]
- *  #K<key>, sets the Xively authentication key [default is foo]
+ *  #K<key>, sets the Xively authentication key [default is -]
  *  #U<url>, sets the Xively URL [default is https://api.xively.com/v2/feeds/]
  *
  * No updates are sent over the Ethernet interface if the feed id is set to 0
