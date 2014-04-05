@@ -58,7 +58,7 @@
 #define FEEDID        0                                   // replace your feed ID
 #define FEEDSURL      "https://api.xively.com/v2/feeds/"  // replace your remote service IP address
 
-#define RELAYPIN      2
+#define RELAYPIN      3
 #define CURRENTPIN    A0
 #define VOLTAGEPIN    A1
 
@@ -111,10 +111,14 @@ void reset() {
 YunServer server;
 
 void setup() {
-  // Init bridge library
-  Bridge.begin();
   // Set serial port
   Serial.begin(115200); 
+  // Use the led 13 to notify that the
+  // setup completed
+  pinMode(13,OUTPUT);
+  digitalWrite(13, HIGH);
+  // Init bridge library
+  Bridge.begin();
   // Default on
   pinMode(RELAYPIN,OUTPUT);
   digitalWrite(RELAYPIN, LOW);
@@ -129,10 +133,11 @@ void setup() {
   // listen on port
   server.listenOnLocalhost();
   server.begin();
+  // Setup ok
+  digitalWrite(13, LOW);
 }
 
 void loop() {
-
   // Make sure that update period is not too high
   // when pushing data to Xively (one sample every 
   // 5 seconds should be a reasonable lower boud)
@@ -171,11 +176,11 @@ void loop() {
   VFinal = scaleVoltage((float)VRaw/sleep);
   IFinal = scaleCurrent((float)IRaw/sleep);
 
-  // send data to remote host
-  sendData();
-
   // dump to serial
   dumpToSerial();
+
+  // send data to remote host
+  sendData();
 
   // profiling
   delta = abs(millis() - started);
