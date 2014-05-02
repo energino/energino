@@ -412,7 +412,7 @@ void sendData() {
     client.print("X-ApiKey: ");
     client.println(settings.apikey);
     client.println("Content-Type: text/csv");
-    client.println("Content-Length: 49");
+    client.println("Content-Length: 53");
     client.println();
 
     char buffer[10]; 
@@ -432,6 +432,7 @@ void sendData() {
     client.print("switch,");
     client.println(digitalRead(RELAYPIN));
 
+    client.flush();
     client.stop();
   }
 }
