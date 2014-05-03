@@ -141,8 +141,8 @@ void loop() {
   // Make sure that update period is not too high
   // when pushing data to Xively (one sample every 
   // 5 seconds should be a reasonable lower boud)
-  if ((settings.feedid != 0) && (settings.period < 5000)) {
-    resetSleep(5000);
+  if ((settings.feedid != 0) && (settings.period < 2000)) {
+    resetSleep(2000);
   }
 
   // Start profiling
