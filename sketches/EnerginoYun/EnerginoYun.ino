@@ -58,7 +58,7 @@
 #define FEEDID        0                                   // replace your feed ID
 #define FEEDSURL      "https://api.xively.com/v2/feeds/"  // replace your remote service IP address
 
-#define RELAYPIN      3
+#define RELAYPIN      2
 #define CURRENTPIN    A0
 #define VOLTAGEPIN    A1
 
@@ -113,15 +113,11 @@ YunServer server;
 void setup() {
   // Set serial port
   Serial.begin(115200); 
-  // Use the led 13 to notify that the
-  // setup completed
-  pinMode(13,OUTPUT);
-  digitalWrite(13, HIGH);
+  // Default on
+  pinMode(RELAYPIN, OUTPUT);
+  digitalWrite(RELAYPIN, LOW);
   // Init bridge library
   Bridge.begin();
-  // Default on
-  pinMode(RELAYPIN,OUTPUT);
-  digitalWrite(RELAYPIN, LOW);
   // Loading setting 
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
   if (strcmp(settings.magic, MAGIC) != 0) {
@@ -133,8 +129,10 @@ void setup() {
   // listen on port
   server.listenOnLocalhost();
   server.begin();
-  // Setup ok
-  digitalWrite(13, LOW);
+  // Use the led 13 to notify that the
+  // setup completed
+  pinMode(13,OUTPUT);
+  digitalWrite(13, HIGH);
 }
 
 void loop() {
@@ -313,9 +311,11 @@ void serParseCommand()
     }
     else if (cmd == 'S') {
       if (value > 0) {
+        Serial.println("@switch: high");
         digitalWrite(RELAYPIN, HIGH);
       } 
       else {
+        Serial.println("@switch: low");
         digitalWrite(RELAYPIN, LOW);
       }
     } 
@@ -392,10 +392,10 @@ void process(YunClient client) {
     if (subCommand == "switch") {
       char c = client.read();
       if (c == '0') {
-        digitalWrite(RELAYPIN, 0);
+        digitalWrite(RELAYPIN, LOW);
       } 
       if (c == '1') {
-        digitalWrite(RELAYPIN, 1);
+        digitalWrite(RELAYPIN, HIGH);
       } 
       sendReply(client,subCommand,digitalRead(RELAYPIN));
       return;
