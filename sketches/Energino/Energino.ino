@@ -50,8 +50,8 @@ long sleep = 0;
 long delta = 0;
 
 // Last computed values
-float VFinal = 0.0;
-float IFinal = 0.0;
+long VFinal = 0.0;
+long IFinal = 0.0;
 
 // magic string
 const char MAGIC[] = "Energino";
@@ -186,6 +186,16 @@ void serParseCommand()
     else if (cmd == 'D') {
       settings.sensitivity = value;
     }
+    else if (cmd == 'T') {
+      long value = 0;
+      for(long i = 0; i < 1000; i++) {
+        value += analogRead(CURRENTPIN);
+      }
+      int v_out = value * 5.0 / 1024;
+      Serial.print("@offset: ");
+      Serial.println(v_out);
+      settings.offset = int(v_out);
+    }
     else if (cmd == 'S') {
       if (value > 0) {
         digitalWrite(RELAYPIN, HIGH);
@@ -205,11 +215,11 @@ void dumpToSerial() {
   Serial.print(",");
   Serial.print(REVISION);
   Serial.print(",");
-  Serial.print(VFinal,3);
+  Serial.print(VFinal / 1000.0, 3);
   Serial.print(",");
-  Serial.print(IFinal,3);
+  Serial.print(IFinal / 1000.0, 3);
   Serial.print(",");
-  Serial.print(VFinal * IFinal,3);
+  Serial.print(VFinal * IFinal / 1000.0, 3);
   Serial.print(",");
   Serial.print(digitalRead(RELAYPIN));
   Serial.print(",");
@@ -219,12 +229,16 @@ void dumpToSerial() {
   Serial.print("\n");  
 }
 
-float scaleVoltage(float voltage) {
-  return ( voltage * 5 * (settings.r1 + settings.r2)) / ( settings.r2 * 1024 );
+long scaleVoltage(float value) {
+  long v_out = value * 5000 / 1024;
+  long output = (v_out * float(settings.r1 + settings.r2)) / settings.r2;
+  return (output > 0) ? output : 0;
 }
 
-float scaleCurrent(float current) {
-  return ( current * 5000 / 1024  - settings.offset) / settings.sensitivity;
+long scaleCurrent(float value) {
+  long v_out = value * 5000 / 1024;
+  long output = (float(v_out - settings.offset) / settings.sensitivity) * 1000.0;
+  return (output > 0) ? output : 0;
 }
 
 void resetSleep(long value) {
