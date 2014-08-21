@@ -207,20 +207,7 @@ void sendData() {
   url += settings.feedid;
   url += ".csv";
 
-  // Send the HTTP PUT request
-
-  // Is better to declare the Process here, so when the
-  // sendData function finishes the resources are immediately
-  // released. Declaring it global works too, BTW.
-  Process xively;
-
-  xively.begin("curl");
-  xively.addParameter("-k");
-  xively.addParameter("--silent");
-  xively.addParameter("--request");
-  xively.addParameter("PUT");
-  xively.addParameter("--data");
-
+  // form the string for the payload
   String dataString = "current,";
   dataString += IFinal;
   dataString += "\nvoltage,";
@@ -230,11 +217,24 @@ void sendData() {
   dataString += "\nswitch,";
   dataString += digitalRead(RELAYPIN);
 
+  // Send the HTTP PUT request
+
+  // Is better to declare the Process here, so when the
+  // sendData function finishes the resources are immediately
+  // released. Declaring it global works too, BTW.
+  Process xively;
+  Serial.print("@sending data... ");
+  xively.begin("curl");
+  xively.addParameter("-k");
+  xively.addParameter("--request");
+  xively.addParameter("PUT");
+  xively.addParameter("--data");
   xively.addParameter(dataString);
   xively.addParameter("--header");
   xively.addParameter(apiString); 
   xively.addParameter(url);
   xively.run();
+  Serial.println("done!");
 
 }
 
