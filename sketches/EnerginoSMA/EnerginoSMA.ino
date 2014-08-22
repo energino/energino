@@ -1,7 +1,7 @@
 /*
  * Energino
  *
- * Energino is a energy consumption meter for DC loads (win average).
+ * Energino is a energy consumption meter for DC loads (moving average)
  *
  * Circuit:
  *  Analog inputs attached to pins A0 (Current), A1 (Voltage)
@@ -21,7 +21,7 @@
  * Serial putput:
  *   #Energino,0,<voltage>,<current>,<power>,<relay>,<period>,<samples>,<voltage_error>,<current_error>
  *
- * created 31 October 2012
+ * created 22 August 2014
  * by Roberto Riggio
  *
  * This code is released under the BSD Licence
@@ -29,6 +29,7 @@
  */
 
 #include <energino.h>
+#include <sma.h>
 
 #define RELAYPIN      2
 #define CURRENTPIN    A0
@@ -41,15 +42,11 @@ int OFFSET = 2500;
 int SENSITIVITY = 185;
 int PERIOD = 2000;
 
-// Last computed values
-double VFinal = 0.0;
-double IFinal = 0.0;
-long lastSamples = 0;
+// Moving averages
+const int MAPOINTS = 101;
 
-// Running averages
-long VRaw = 0;
-long IRaw = 0;
-long samples = 0;
+SMA v_sma(MAPOINTS);
+SMA i_sma(MAPOINTS);
 
 // Last update
 long lastUpdated;
@@ -94,20 +91,15 @@ void loop() {
   // Parse incoming commands
   serParseCommand();
   // accumulate readings
-  VRaw += analogRead(VOLTAGEPIN);
-  IRaw += analogRead(CURRENTPIN);
-  samples++;
+  int v = analogRead(VOLTAGEPIN);
+  int i = analogRead(CURRENTPIN);
+  v_sma.add(v);
+  i_sma.add(i);
   if (lastUpdated + settings.period <= millis()) {
-    // Conversion
-    VFinal = double(VRaw) / samples;
-    IFinal = double(IRaw) / samples;
-    lastSamples = samples;
+    Serial.println(i_sma.avg() * 4.9);
     // dump to serial
     dumpToSerial();
     // reset counters
-    VRaw = 0;
-    IRaw = 0;
-    samples = 0;
     lastUpdated = millis();
   }
 }
@@ -119,17 +111,17 @@ void dumpToSerial() {
   Serial.print(",");
   Serial.print(REVISION);
   Serial.print(",");
-  Serial.print(getAvgVoltage(VFinal), 2);
+  Serial.print(getAvgVoltage(v_sma.avg()), 2);
   Serial.print(",");
-  Serial.print(getAvgCurrent(IFinal), 2);
+  Serial.print(getAvgCurrent(i_sma.avg()), 2);
   Serial.print(",");
-  Serial.print(getAvgPower(VFinal, IFinal), 1);
+  Serial.print(getAvgPower(v_sma.avg(), i_sma.avg()), 1);
   Serial.print(",");
   Serial.print(digitalRead(settings.relaypin));
   Serial.print(",");
   Serial.print(settings.period);
   Serial.print(",");
-  Serial.print(lastSamples);
+  Serial.print(MAPOINTS);
   Serial.print(",");
   Serial.print(getVError());
   Serial.print(",");
