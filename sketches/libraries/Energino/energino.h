@@ -8,12 +8,21 @@
 #include "Arduino.h"
 #include <avr/eeprom.h>
 
+// default reference voltage
 int DEFAULT_AREF = 5000;
 
-// Permanent configuration
+// Last computed values
+double VFinal = 0.0;
+double IFinal = 0.0;
+long lastSamples = 0;
+
+// Last update
+long lastUpdated;
+
 // Permanent configuration
 struct settings_t {
   char magic[12];
+  int revision;
   long period;
   int r1;
   int r2;
@@ -90,6 +99,10 @@ void loadSettings() {
 }
 
 void dumpSettings() {
+  Serial.print("@magic: ");
+  Serial.println(settings.magic);
+  Serial.print("@revision: ");
+  Serial.println(settings.revision);
   Serial.print("@period: ");
   Serial.print(settings.period);
   Serial.println(" ms");
@@ -228,6 +241,51 @@ void serParseCommand(int aref)
 
 void serParseCommand() {
   serParseCommand(DEFAULT_AREF);
+}
+
+void dumpToSerial() {
+  // Print data also on the serial
+  Serial.print("#");
+  Serial.print(settings.magic);
+  Serial.print(",");
+  Serial.print(settings.revision);
+  Serial.print(",");
+  Serial.print(getAvgVoltage(VFinal), 2);
+  Serial.print(",");
+  Serial.print(getAvgCurrent(IFinal), 2);
+  Serial.print(",");
+  Serial.print(getAvgPower(VFinal, IFinal), 1);
+  Serial.print(",");
+  Serial.print(digitalRead(settings.relaypin));
+  Serial.print(",");
+  Serial.print(settings.period);
+  Serial.print(",");
+  Serial.print(lastSamples);
+  Serial.print(",");
+  Serial.print(getVError());
+  Serial.print(",");
+  Serial.print(getIError());
+  Serial.print("\n");
+}
+
+void init(const char * magic) {
+  // Set serial port
+  Serial.begin(115200);
+  // Loading setting
+  loadSettings();
+  if (strcmp(settings.magic, magic) != 0) {
+    reset();
+    saveSettings();
+  }
+  // Default on
+  pinMode(settings.relaypin,OUTPUT);
+  digitalWrite(settings.relaypin, LOW);
+  // Use the led 13 to notify that the
+  // setup completed
+  pinMode(13,OUTPUT);
+  digitalWrite(13, HIGH);
+  // Set last update to now
+  lastUpdated = millis();
 }
 
 #endif

@@ -48,15 +48,13 @@ const int MAPOINTS = 101;
 SMA v_sma(MAPOINTS);
 SMA i_sma(MAPOINTS);
 
-// Last update
-long lastUpdated;
-
 // magic string
 const char MAGIC[] = "Energino";
 const int REVISION = 1;
 
 void reset() {
-  strcpy (settings.magic,MAGIC);
+  strcpy (settings.magic, MAGIC);
+  settings.revision = REVISION;
   settings.period = PERIOD;
   settings.r1 = R1;
   settings.r2 = R2;
@@ -68,23 +66,7 @@ void reset() {
 }
 
 void setup() {
-  // Set serial port
-  Serial.begin(115200);
-  // Loading setting
-  loadSettings();
-  if (strcmp(settings.magic, MAGIC) != 0) {
-    reset();
-    saveSettings();
-  }
-  // Default on
-  pinMode(settings.relaypin,OUTPUT);
-  digitalWrite(settings.relaypin, LOW);
-  // Use the led 13 to notify that the
-  // setup completed
-  pinMode(13,OUTPUT);
-  digitalWrite(13, HIGH);
-  // Set last update to now
-  lastUpdated = millis();
+  init(MAGIC);
 }
 
 void loop() {
@@ -96,7 +78,10 @@ void loop() {
   v_sma.add(v);
   i_sma.add(i);
   if (lastUpdated + settings.period <= millis()) {
-    Serial.println(i_sma.avg() * 4.9);
+    // Conversion
+    VFinal = v_sma.avg();
+    IFinal = i_sma.avg();
+    lastSamples = MAPOINTS;
     // dump to serial
     dumpToSerial();
     // reset counters
@@ -104,27 +89,3 @@ void loop() {
   }
 }
 
-void dumpToSerial() {
-  // Print data also on the serial
-  Serial.print("#");
-  Serial.print(MAGIC);
-  Serial.print(",");
-  Serial.print(REVISION);
-  Serial.print(",");
-  Serial.print(getAvgVoltage(v_sma.avg()), 2);
-  Serial.print(",");
-  Serial.print(getAvgCurrent(i_sma.avg()), 2);
-  Serial.print(",");
-  Serial.print(getAvgPower(v_sma.avg(), i_sma.avg()), 1);
-  Serial.print(",");
-  Serial.print(digitalRead(settings.relaypin));
-  Serial.print(",");
-  Serial.print(settings.period);
-  Serial.print(",");
-  Serial.print(MAPOINTS);
-  Serial.print(",");
-  Serial.print(getVError());
-  Serial.print(",");
-  Serial.print(getIError());
-  Serial.print("\n");
-}
