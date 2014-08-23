@@ -38,10 +38,6 @@ struct settings_t {
 
 void reset();
 
-void dumpToSerial();
-
-void setPeriod(long value);
-
 double res(int aref) {
   return aref / 1024.0;
 }
@@ -243,18 +239,18 @@ void serParseCommand() {
   serParseCommand(DEFAULT_AREF);
 }
 
-void dumpToSerial() {
+void dumpToSerial(int aref) {
   // Print data also on the serial
   Serial.print("#");
   Serial.print(settings.magic);
   Serial.print(",");
   Serial.print(settings.revision);
   Serial.print(",");
-  Serial.print(getAvgVoltage(VFinal), 2);
+  Serial.print(getAvgVoltage(VFinal, aref), 2);
   Serial.print(",");
-  Serial.print(getAvgCurrent(IFinal), 2);
+  Serial.print(getAvgCurrent(IFinal, aref), 2);
   Serial.print(",");
-  Serial.print(getAvgPower(VFinal, IFinal), 1);
+  Serial.print(getAvgPower(VFinal, IFinal, aref), 1);
   Serial.print(",");
   Serial.print(digitalRead(settings.relaypin));
   Serial.print(",");
@@ -262,30 +258,14 @@ void dumpToSerial() {
   Serial.print(",");
   Serial.print(lastSamples);
   Serial.print(",");
-  Serial.print(getVError());
+  Serial.print(getVError(aref));
   Serial.print(",");
-  Serial.print(getIError());
+  Serial.print(getIError(aref));
   Serial.print("\n");
 }
 
-void init(const char * magic) {
-  // Set serial port
-  Serial.begin(115200);
-  // Loading setting
-  loadSettings();
-  if (strcmp(settings.magic, magic) != 0) {
-    reset();
-    saveSettings();
-  }
-  // Default on
-  pinMode(settings.relaypin,OUTPUT);
-  digitalWrite(settings.relaypin, LOW);
-  // Use the led 13 to notify that the
-  // setup completed
-  pinMode(13,OUTPUT);
-  digitalWrite(13, HIGH);
-  // Set last update to now
-  lastUpdated = millis();
+void dumpToSerial() {
+  dumpToSerial(DEFAULT_AREF);
 }
 
 #endif

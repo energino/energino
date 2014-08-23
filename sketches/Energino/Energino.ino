@@ -64,7 +64,23 @@ void reset() {
 }
 
 void setup() {
-  init(MAGIC);
+  // Set serial port
+  Serial.begin(115200);
+  // Loading setting
+  loadSettings();
+  if (strcmp(settings.magic, MAGIC) != 0) {
+    reset();
+    saveSettings();
+  }
+  // Default on
+  pinMode(settings.relaypin,OUTPUT);
+  digitalWrite(settings.relaypin, LOW);
+  // Use the led 13 to notify that the
+  // setup completed
+  pinMode(13,OUTPUT);
+  digitalWrite(13, HIGH);
+  // Set last update to now
+  lastUpdated = millis();
 }
 
 void loop() {

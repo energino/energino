@@ -46,10 +46,8 @@
  */
 
 #include <energino.h>
+#include <energinolive.h>
 #include <sma.h>
-#include <Process.h>
-#include <Bridge.h>
-#include <YunServer.h>
 #include <YunClient.h>
 
 #define APIKEY        "foo"
@@ -72,19 +70,16 @@ const char MAGIC[] = "EnerginoPOE";
 const int REVISION = 1;
 
 // Moving averages
-const int MAPOINTS = 101;
-
-SMA v_sma(MAPOINTS);
-SMA i_sma(MAPOINTS);
-
-// Last update
-long lastUpdated;
+const int SMAPOINTS = 101;
+SMA v_sma(SMAPOINTS);
+SMA i_sma(SMAPOINTS);
 
 // External AREF in mV
 int AREF = 4096;
 
 void reset() {
   strcpy (settings.magic,MAGIC);
+  settings.revision = REVISION;
   settings.period = PERIOD;
   settings.r1 = R1;
   settings.r2 = R2;
@@ -98,12 +93,11 @@ void reset() {
   strcpy (settings.feedsurl,FEEDSURL);
 }
 
-// rest server
-YunServer server;
-
 void setup() {
   // Set serial port
   Serial.begin(115200);
+  // Set external reference
+  analogReference(EXTERNAL);
   // Loading setting
   loadSettings();
   if (strcmp(settings.magic, MAGIC) != 0) {
@@ -127,17 +121,14 @@ void setup() {
 }
 
 void loop() {
-
   // Make sure that update period is not too high
   // when pushing data to Xively (one sample every
   // 2 seconds should be a reasonable lower boud)
   if ((settings.feedid != 0) && (settings.period < 2000)) {
     settings.period = 2000;
   }
-
   // Get clients coming from server
   YunClient client = server.accept();
-
   // There is a new client?
   if (client) {
     // Process request
@@ -145,168 +136,24 @@ void loop() {
     // Close connection and free resources.
     client.stop();
   }
-
   // Parse incoming commands
-  serParseCommand();
-
+  serParseCommand(AREF);
   // Instant values are too floating,
   // let's smooth them up
-  int v = analogRead(VOLTAGEPIN);
-  int i = analogRead(CURRENTPIN);
-
+  int v = analogRead(settings.voltagepin);
+  int i = analogRead(settings.currentpin);
   v_sma.add(v);
   i_sma.add(i);
-
   if (lastUpdated + settings.period <= millis()) {
+    // Conversion
+    VFinal = v_sma.avg();
+    IFinal = i_sma.avg();
+    lastSamples = SMAPOINTS;
     // dump to serial
-    dumpToSerial();
+    dumpToSerialLive(AREF);
     // send data to remote host
-    sendData();
+    sendData(AREF);
     // set last update
     lastUpdated = millis();
   }
-
-}
-
-// this method makes a HTTP connection to the server:
-void sendData() {
-
-  if (settings.feedid == 0) {
-    return;
-  }
-
-  // form the string for the API header parameter:
-  String apiString = "X-ApiKey: ";
-  apiString += settings.apikey;
-
-  // form the string for the URL parameter:
-  String url = settings.feedsurl;
-  url += settings.feedid;
-  url += ".csv";
-
-  // form the string for the payload
-  String dataString = "current,";
-  dataString += getAvgCurrent(i_sma.avg(), AREF);
-  dataString += "\nvoltage,";
-  dataString += getAvgVoltage(v_sma.avg(), AREF);
-  dataString += "\npower,";
-  dataString += getAvgPower(v_sma.avg(), i_sma.avg(), AREF);
-  dataString += "\nswitch,";
-  dataString += digitalRead(settings.relaypin);
-
-  // Send the HTTP PUT request
-
-  // Is better to declare the Process here, so when the
-  // sendData function finishes the resources are immediately
-  // released. Declaring it global works too, BTW.
-  Process xively;
-  Serial.print("@sending data... ");
-  xively.begin("curl");
-  xively.addParameter("-k");
-  xively.addParameter("--request");
-  xively.addParameter("PUT");
-  xively.addParameter("--data");
-  xively.addParameter(dataString);
-  xively.addParameter("--header");
-  xively.addParameter(apiString);
-  xively.addParameter(url);
-  xively.run();
-  Serial.println("done!");
-
-}
-
-void dumpToSerial() {
-  // Print data also on the serial
-  Serial.print("#");
-  Serial.print(MAGIC);
-  Serial.print(",");
-  Serial.print(REVISION);
-  Serial.print(",");
-  Serial.print(getAvgVoltage(v_sma.avg(), AREF), 2);
-  Serial.print(",");
-  Serial.print(getAvgCurrent(i_sma.avg(), AREF), 2);
-  Serial.print(",");
-  Serial.print(getAvgPower(v_sma.avg(), i_sma.avg(), AREF), 1);
-  Serial.print(",");
-  Serial.print(digitalRead(settings.relaypin));
-  Serial.print(",");
-  Serial.print(settings.period);
-  Serial.print(",");
-  Serial.print(MAPOINTS);
-  Serial.print(",");
-  Serial.print(getVError(AREF));
-  Serial.print(",");
-  Serial.print(getIError(AREF));
-  Serial.print(",");
-  Serial.print(settings.feedid);
-  Serial.print(",");
-  Serial.print(settings.feedsurl);
-  Serial.print(",");
-  Serial.println(settings.apikey);
-}
-
-void process(YunClient client) {
-
-  String command = client.readStringUntil('/');
-  command.trim();
-
-  if (command == "datastreams") {
-
-    String subCommand = client.readStringUntil('/');
-    subCommand.trim();
-
-    if (subCommand == "current") {
-      sendReply(client,subCommand,getAvgCurrent(i_sma.avg(), AREF));
-      return;
-    }
-
-    if (subCommand == "voltage") {
-      sendReply(client,subCommand,getAvgVoltage(v_sma.avg(), AREF));
-      return;
-    }
-
-    if (subCommand == "power") {
-      sendReply(client,subCommand,getAvgPower(v_sma.avg(), i_sma.avg(), AREF));
-      return;
-    }
-
-    if (subCommand == "switch") {
-      char c = client.read();
-      if (c == '0') {
-        digitalWrite(settings.relaypin, LOW);
-      }
-      if (c == '1') {
-        digitalWrite(settings.relaypin, HIGH);
-      }
-      sendReply(client,subCommand,digitalRead(RELAYPIN));
-      return;
-    }
-
-    client.print(F("{\"version\":\"1.0.0\","));
-    client.print(F("\"datastreams\":["));
-    client.print(F("{\"id\":\"voltage\",\"current_value\":"));
-    client.print(getAvgVoltage(v_sma.avg(), AREF));
-    client.println(F("},"));
-    client.print(F("{\"id\":\"current\",\"current_value\":"));
-    client.print(getAvgCurrent(i_sma.avg(), AREF));
-    client.println(F("},"));
-    client.print(F("{\"id\":\"power\",\"current_value\":"));
-    client.print(getAvgPower(v_sma.avg(), i_sma.avg(), AREF));
-    client.println(F("},"));
-    client.print(F("{\"id\":\"switch\",\"current_value\":"));
-    client.print(digitalRead(settings.relaypin));
-    client.println(F("}"));
-    client.println(F("]"));
-    client.println(F("}"));
-  }
-
-}
-
-void sendReply(YunClient client, String cmd, float value) {
-  client.print(F("{\"version\":\"1.0.0\","));
-  client.print(F("\"id\":\""));
-  client.print(cmd);
-  client.print(F("\",\"current_value\":"));
-  client.print(value);
-  client.println(F("}"));
 }
