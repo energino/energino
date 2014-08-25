@@ -14,16 +14,21 @@ int DEFAULT_AREF = 5000;
 // Last computed values
 double VFinal = 0.0;
 double IFinal = 0.0;
-long lastSamples = 0;
+unsigned int lastSamples = 0;
+
+// digits to be printed on the serial
+int V_DIGITS = 3;
+int C_DIGITS = 3;
+int P_DIGITS = 2;
 
 // Last update
-long lastUpdated;
+unsigned long lastUpdated;
 
 // Permanent configuration
 struct settings_t {
   char magic[12];
   int revision;
-  long period;
+  int period;
   int r1;
   int r2;
   int offset;
@@ -32,7 +37,7 @@ struct settings_t {
   int currentpin;
   int voltagepin;
   char apikey[49];
-  long feedid;
+  unsigned long feedid;
   char feedsurl[60];
 } settings;
 
@@ -42,25 +47,28 @@ double res(int aref) {
   return aref / 1024.0;
 }
 
-long getVError(int aref) {
+// max voltage quantization error in mV
+int getVError(int aref) {
   return (res(aref) * (settings.r1 + settings.r2)) / settings.r2;
 }
 
-long getVError() {
+int getVError() {
   return getVError(DEFAULT_AREF);
 }
 
-long getIError(int aref) {
+// max current quantization error in mA
+int getIError(int aref) {
   return (res(aref) / settings.sensitivity) * 1000.0;
 }
 
-long getIError() {
+int getIError() {
   return getIError(DEFAULT_AREF);
 }
 
+// covert 10-bits DAC reading into V
 double getAvgVoltage(double value, int aref) {
-  long v_out = value * res(aref);
-  long output = (v_out * double(settings.r1 + settings.r2)) / settings.r2;
+  double v_out = value * res(aref);
+  double output = (v_out * double(settings.r1 + settings.r2)) / settings.r2;
   return (output > 0) ? output / 1000.0 : 0;
 }
 
@@ -68,8 +76,9 @@ double getAvgVoltage(double value) {
   return getAvgVoltage(value, DEFAULT_AREF);
 }
 
+// covert 10-bits DAC reading into A
 double getAvgCurrent(double value, int aref) {
-  long v_out = value * res(aref);
+  double v_out = value * res(aref);
   double output = double(v_out - settings.offset) / settings.sensitivity;
   return (output > 0) ? output : 0;
 }
@@ -78,7 +87,8 @@ double getAvgCurrent(double value) {
   return getAvgCurrent(value, DEFAULT_AREF);
 }
 
-double getAvgPower(double voltage, double current, long aref) {
+// covert 10-bits DAC reading into W
+double getAvgPower(double voltage, double current, int aref) {
   return getAvgVoltage(voltage, aref) * getAvgCurrent(current, aref);
 }
 
@@ -86,6 +96,7 @@ double getAvgPower(double voltage, double current) {
   return getAvgPower(voltage, current, DEFAULT_AREF);
 }
 
+// save/read settings to eeprom
 void saveSettings() {
     eeprom_write_block((const void*)&settings, (void*)0, sizeof(settings));
 }
@@ -94,6 +105,7 @@ void loadSettings() {
   eeprom_read_block((void*)&settings, (void*)0, sizeof(settings));
 }
 
+// dump settings to serial
 void dumpSettings() {
   Serial.print("@magic: ");
   Serial.println(settings.magic);
@@ -122,6 +134,7 @@ void dumpSettings() {
   Serial.println(settings.voltagepin);
 }
 
+// parse serial CLI command
 void serParseCommand(int aref)
 {
   // if serial is not available there is no point in continuing
@@ -239,6 +252,7 @@ void serParseCommand() {
   serParseCommand(DEFAULT_AREF);
 }
 
+// dump current readings to serial
 void dumpToSerial(int aref) {
   // Print data also on the serial
   Serial.print("#");
@@ -246,11 +260,11 @@ void dumpToSerial(int aref) {
   Serial.print(",");
   Serial.print(settings.revision);
   Serial.print(",");
-  Serial.print(getAvgVoltage(VFinal, aref), 2);
+  Serial.print(getAvgVoltage(VFinal, aref), V_DIGITS);
   Serial.print(",");
-  Serial.print(getAvgCurrent(IFinal, aref), 2);
+  Serial.print(getAvgCurrent(IFinal, aref), C_DIGITS);
   Serial.print(",");
-  Serial.print(getAvgPower(VFinal, IFinal, aref), 1);
+  Serial.print(getAvgPower(VFinal, IFinal, aref), P_DIGITS);
   Serial.print(",");
   Serial.print(digitalRead(settings.relaypin));
   Serial.print(",");

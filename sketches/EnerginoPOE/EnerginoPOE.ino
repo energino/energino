@@ -45,10 +45,13 @@
  *
  */
 
+#include <Bridge.h>
+#include <YunServer.h>
+#include <YunClient.h>
 #include <energino.h>
 #include <energinolive.h>
 #include <sma.h>
-#include <YunClient.h>
+#include <MemoryFree.h>
 
 #define APIKEY        "foo"
 #define FEEDID        0
@@ -78,7 +81,7 @@ SMA i_sma(SMAPOINTS);
 int AREF = 4096;
 
 void reset() {
-  strcpy (settings.magic,MAGIC);
+  strcpy (settings.magic, MAGIC);
   settings.revision = REVISION;
   settings.period = PERIOD;
   settings.r1 = R1;
@@ -88,10 +91,13 @@ void reset() {
   settings.relaypin = RELAYPIN;
   settings.currentpin = CURRENTPIN;
   settings.voltagepin = VOLTAGEPIN;
-  strcpy (settings.apikey,APIKEY);
+  strcpy (settings.apikey, APIKEY);
   settings.feedid = FEEDID;
-  strcpy (settings.feedsurl,FEEDSURL);
+  strcpy (settings.feedsurl, FEEDSURL);
 }
+
+// Instantiate a server enabling the the Yun to listen for connected clients.
+YunServer server;
 
 void setup() {
   // Set serial port
@@ -105,7 +111,7 @@ void setup() {
     saveSettings();
   }
   // Default on
-  pinMode(settings.relaypin,OUTPUT);
+  pinMode(settings.relaypin, OUTPUT);
   digitalWrite(settings.relaypin, LOW);
   // Init bridge library
   Bridge.begin();
@@ -114,7 +120,7 @@ void setup() {
   server.begin();
   // Use the led 13 to notify that the
   // setup completed
-  pinMode(13,OUTPUT);
+  pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
   // Set last update to now
   lastUpdated = millis();
@@ -132,7 +138,7 @@ void loop() {
   // There is a new client?
   if (client) {
     // Process request
-    process(client);
+    //process(client);
     // Close connection and free resources.
     client.stop();
   }
@@ -150,10 +156,11 @@ void loop() {
     IFinal = i_sma.avg();
     lastSamples = SMAPOINTS;
     // dump to serial
-    dumpToSerialLive(AREF);
+    dumpToSerial(AREF);
     // send data to remote host
     sendData(AREF);
     // set last update
     lastUpdated = millis();
   }
 }
+
