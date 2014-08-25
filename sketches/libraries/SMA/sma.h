@@ -11,7 +11,7 @@
 class SMA {
 public:
   SMA(unsigned int period) :
-    period(period), window(new int[period]), head(NULL), tail(NULL),
+    period(period), window(new long[period]), head(NULL), tail(NULL),
         total(0) {
     assert(period >= 1);
   }
@@ -59,17 +59,17 @@ public:
 
 private:
   unsigned int period;
-  int * window; // Holds the values to calculate the average of.
+  long * window; // Holds the values to calculate the average of.
 
   // Logically, head is before tail
-  int * head; // Points at the oldest element we've stored.
-  int * tail; // Points at the newest element we've stored.
+  long * head; // Points at the oldest element we've stored.
+  long * tail; // Points at the newest element we've stored.
 
-  int total; // Cache the total so we don't sum everything each time.
+  long total; // Cache the total so we don't sum everything each time.
 
   // Bumps the given pointer up by one.
   // Wraps to the start of the array if needed.
-  void inc(int * & p) {
+  void inc(long * & p) {
     if (++p >= window + period) {
       p = window;
     }

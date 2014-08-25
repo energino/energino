@@ -74,7 +74,7 @@ const char MAGIC[] = "EnerginoPOE";
 const int REVISION = 1;
 
 // Moving averages
-const int SMAPOINTS = 101;
+const int SMAPOINTS = 40;
 SMA v_sma(SMAPOINTS);
 SMA i_sma(SMAPOINTS);
 

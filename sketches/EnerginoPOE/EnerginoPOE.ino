@@ -6,6 +6,9 @@
  * Circuit:
  *  Analog inputs attached to pins A2 (Current), A1 (Voltage)
  *  Digital output attached to pin D4 (Relay)
+ *  Green led attached to pin D3
+ *  Yellow led attached to pin D2
+ *  Red led attached to pin D5
  *
  * Supported commands from the serial:
  *  #P<integer>, sets the period between two updates (in ms) [default is 2000]
@@ -62,6 +65,10 @@
 #define CURRENTPIN    A2
 #define VOLTAGEPIN    A1
 
+#define GREENLED      3
+#define YELLOWLED     2
+#define REDLED        5
+
 // Energino parameters
 int R1 = 390;
 int R2 = 100;
@@ -74,7 +81,7 @@ const char MAGIC[] = "EnerginoPOE";
 const int REVISION = 1;
 
 // Moving averages
-const int SMAPOINTS = 101;
+const int SMAPOINTS = 40;
 SMA v_sma(SMAPOINTS);
 SMA i_sma(SMAPOINTS);
 
@@ -119,10 +126,17 @@ void setup() {
   // listen on port
   server.listenOnLocalhost();
   server.begin();
-  // Use the led 13 to notify that the
+  // Use the led 13 and GREEN to notify that the
   // setup completed
   pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
+  pinMode(GREENLED, OUTPUT);
+  digitalWrite(GREENLED, LOW);
+  // Set defaults
+  pinMode(YELLOWLED, OUTPUT);
+  digitalWrite(YELLOWLED, HIGH);
+  pinMode(REDLED, OUTPUT);
+  digitalWrite(REDLED, HIGH);
   // Set last update to now
   lastUpdated = millis();
 }
@@ -139,7 +153,7 @@ void loop() {
   // There is a new client?
   if (client) {
     // Process request
-    //process(client);
+    process(client);
     // Close connection and free resources.
     client.stop();
   }
@@ -159,6 +173,10 @@ void loop() {
     // dump to serial
     dumpToSerial(AREF);
     // send data to remote host
+    if (settings.feedid > 0)
+      digitalWrite(YELLOWLED, LOW);
+    else
+      digitalWrite(YELLOWLED, HIGH);
     sendData(AREF);
     // set last update
     lastUpdated = millis();
