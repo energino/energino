@@ -74,7 +74,7 @@ int R1 = 390;
 int R2 = 100;
 int OFFSET = 2500;
 int SENSITIVITY = 185;
-int PERIOD = 2000;
+int PERIOD = 5000;
 
 // magic string
 const char MAGIC[] = "EnerginoPOE";
@@ -143,10 +143,9 @@ void setup() {
 
 void loop() {
   // Make sure that update period is not too high
-  // when pushing data to Xively (one sample every
-  // 2 seconds should be a reasonable lower boud)
-  if ((settings.feedid != 0) && (settings.period < 2000)) {
-    settings.period = 2000;
+  // when pushing data to Xively 
+  if ((settings.feedid != 0) && (settings.period < PERIOD)) {
+    settings.period = PERIOD;
   }
   // Get clients coming from server
   YunClient client = server.accept();
