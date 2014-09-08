@@ -35,10 +35,10 @@
 #define VOLTAGEPIN    A1
 
 // Energino parameters
-int R1 = 100;
-int R2 = 10;
-int OFFSET = 2500;
-int SENSITIVITY = 185;
+int R1 = 351;
+int R2 = 159;
+int OFFSET = 2522;
+int SENSITIVITY = 68;
 int PERIOD = 2000;
 
 // Running averages
@@ -62,6 +62,9 @@ void reset() {
   settings.currentpin = CURRENTPIN;
   settings.voltagepin = VOLTAGEPIN;
 }
+
+const int SIZE = 60;
+const double DISCARGE[SIZE] = { 11.80955, 11.73545, 11.68159, 11.63941, 11.60351, 11.57391, 11.54949, 11.52911, 11.50617, 11.4875, 11.46275, 11.43834, 11.41059, 11.38791, 11.36826, 11.34609, 11.3312, 11.31662, 11.29723, 11.27976, 11.2605, 11.23614, 11.21343, 11.18729, 11.16382, 11.13759, 11.11293, 11.08473, 11.05694, 11.02778, 11.00032, 10.96197, 10.94706, 10.91152, 10.88357, 10.85808, 10.82778, 10.79685, 10.76562, 10.73019, 10.69061, 10.64628, 10.58518, 10.61087, 10.53965, 10.47965, 10.41535, 10.34984, 10.30516, 10.23873, 10.17664, 10.11481, 10.04997, 9.98091, 9.90735, 9.81934, 9.73173, 9.53416, 9.07717, 8.5747 };
 
 void setup() {
   // Set serial port
@@ -105,21 +108,18 @@ void loop() {
   }
 }
 
-int MAX_V_BATT = 12;
-int MIN_V_BATT = 10;
-
-double a =  1 / double(MAX_V_BATT -  MIN_V_BATT);
-double b = 1 - a * MAX_V_BATT;
-
 // coumpute battery percentage
 double getBattery(double VFinal) {
-    if (VFinal > MAX_V_BATT) {
-      return 1.0;
+    int i;
+    for (i = 0; i < SIZE; i++) {
+      if (DISCARGE[i] < getAvgVoltage(VFinal)) {
+          break;
+      }
     }
-    if (VFinal < MIN_V_BATT) {
-      return 0.0;
+    if (i > 0) {
+      return 1.0 - (i - 1.0) / SIZE;
     }
-    return a * VFinal - b;
+    return 1.0;
 }
 
 // dump current readings to serial
