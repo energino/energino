@@ -38,14 +38,13 @@ if sys.version < '2.7':
     raise ValueError("Sorry Python versions older than 2.7 are not supported")
 
 setup(name="energino",
-      version="0.2",
+      version="1.0",
       description="PyEnergino",
       author="Roberto Riggio",
       author_email="roberto.riggio@create-net.org",
       url="https://github.com/rriggio/energino",
       long_description="Energino distributed energy monitoring toolkit",
-      entry_points={"console_scripts":["energino = energino.energino:main"]},
+      entry_points={"console_scripts": ["energino = energino.energino:main"]},
       packages=['energino'],
       license="Python",
-      platforms="any"
-)
+      platforms="any")
