@@ -47,7 +47,7 @@ long IRaw = 0;
 long samples = 0;
 
 // magic string
-const char MAGIC[] = "Energino";
+const char MAGIC[] = "EnerginoAbs";
 const int REVISION = 1;
 
 void reset() {
@@ -108,6 +108,23 @@ void loop() {
   }
 }
 
+int MAX_V_BATT = 12;
+int MIN_V_BATT = 10;
+
+double a =  1 / double(MAX_V_BATT -  MIN_V_BATT);
+double b = 1 - a * MAX_V_BATT;
+
+// coumpute battery percentage
+double getBatteryFitted(double VFinal) {
+    if (VFinal > MAX_V_BATT) {
+      return 1.0;
+    }
+    if (VFinal < MIN_V_BATT) {
+      return 0.0;
+    }
+    return a * VFinal - b;
+}
+
 // coumpute battery percentage
 double getBattery(double VFinal) {
     int i;
@@ -147,6 +164,8 @@ void dumpToSerialBatt() {
   Serial.print(getIError());
   Serial.print(",");
   Serial.print(getBattery(VFinal), 2);
+  Serial.print(",");
+  Serial.print(getBatteryFitted(VFinal), 2);
   Serial.print("\n");
 }
 
