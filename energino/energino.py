@@ -45,81 +45,112 @@ DEFAULT_DEVICE_SPEED_BPS = 115200
 DEFAULT_INTERVAL = 200
 LOG_FORMAT = '%(asctime)-15s %(message)s'
 
+
 def unpack_energino_v1(line):
     """ Unpack Energino status line. """
 
     logging.debug("line: %s", line.replace('\n', ''))
 
-    if (type(line) is str
-        and len(line) > 0
-        and line[0] == "#"
-        and line[-1] == '\n'):
+    if type(line) is str and len(line) > 0 and \
+       line[0] == "#" and line[-1] == '\n':
 
         readings = line[1:-1].split(",")
-        if len(readings) == 8:
-            return {'voltage' : float(readings[2]),
-                    'current' : float(readings[3]),
-                    'power' : float(readings[4]),
-                    'switch' : int(readings[5]),
-                    'window' : int(readings[6]),
-                    'samples' : int(readings[7])}
+
+        if len(readings) == 10:
+            return {'voltage': float(readings[2]),
+                    'current': float(readings[3]),
+                    'power': float(readings[4]),
+                    'switch': int(readings[5]),
+                    'window': int(readings[6]),
+                    'samples': int(readings[7]),
+                    'v_error': int(readings[8]),
+                    'i_error': int(readings[9])}
 
     raise ValueError("invalid line: %s" % line[0:-1])
+
+
+def unpack_energino_abs_v1(line):
+    """ Unpack Energino status line. """
+
+    logging.debug("line: %s", line.replace('\n', ''))
+
+    if type(line) is str and len(line) > 0 and \
+       line[0] == "#" and line[-1] == '\n':
+
+        readings = line[1:-1].split(",")
+
+        if len(readings) == 12:
+            return {'voltage': float(readings[2]),
+                    'current': float(readings[3]),
+                    'power': float(readings[4]),
+                    'switch': int(readings[5]),
+                    'window': int(readings[6]),
+                    'samples': int(readings[7]),
+                    'v_error': int(readings[8]),
+                    'i_error': int(readings[9]),
+                    'battery': float(readings[10]),
+                    'fitted': float(readings[11])}
+
+    raise ValueError("invalid line: %s" % line[0:-1])
+
 
 def unpack_energino_ethernet_v1(line):
     """ Unpack Energino status line. """
 
     logging.debug("line: %s", line.replace('\n', ''))
 
-    if (type(line) is str
-        and len(line) > 0
-        and line[0] == "#"
-        and line[-1] == '\n'):
+    if type(line) is str and \
+       len(line) > 0 and \
+       line[0] == "#" and \
+       line[-1] == '\n':
 
         readings = line[1:-1].split(",")
         if len(readings) == 14:
-            return {'voltage' : float(readings[2]),
-                    'current' : float(readings[3]),
-                    'power' : float(readings[4]),
-                    'switch' : int(readings[5]),
-                    'window' : int(readings[6]),
-                    'samples' : int(readings[7]),
-                    'ip' : readings[8],
-                    'server_port' : readings[9],
-                    'host' : readings[10],
-                    'host_port' : readings[11],
-                    'feed' : readings[12],
-                    'key' : readings[13]}
+            return {'voltage': float(readings[2]),
+                    'current': float(readings[3]),
+                    'power': float(readings[4]),
+                    'switch': int(readings[5]),
+                    'window': int(readings[6]),
+                    'samples': int(readings[7]),
+                    'ip': readings[8],
+                    'server_port': readings[9],
+                    'host': readings[10],
+                    'host_port': readings[11],
+                    'feed': readings[12],
+                    'key': readings[13]}
 
     raise ValueError("invalid line: %s" % line[0:-1])
+
 
 def unpack_energino_yun_v1(line):
     """ Unpack Energino YUN status line. """
 
     logging.debug("line: %s", line.replace('\n', ''))
 
-    if (type(line) is str
-        and len(line) > 0
-        and line[0] == "#"
-        and line[-1] == '\n'):
+    if type(line) is str and \
+       len(line) > 0 and \
+       line[0] == "#" and \
+       line[-1] == '\n':
 
         readings = line[1:-1].split(",")
         if len(readings) == 11:
-            return {'voltage' : float(readings[2]),
-                    'current' : float(readings[3]),
-                    'power' : float(readings[4]),
-                    'switch' : int(readings[5]),
-                    'window' : int(readings[6]),
-                    'samples' : int(readings[7]),
-                    'feed' : readings[8],
-                    'url' : readings[9],
-                    'key' : readings[10]}
+            return {'voltage': float(readings[2]),
+                    'current': float(readings[3]),
+                    'power': float(readings[4]),
+                    'switch': int(readings[5]),
+                    'window': int(readings[6]),
+                    'samples': int(readings[7]),
+                    'feed': readings[8],
+                    'url': readings[9],
+                    'key': readings[10]}
 
     raise ValueError("invalid line: %s" % line[0:-1])
 
-MODELS = {"Energino" : {1 : unpack_energino_v1},
-          "EnerginoEthernet" : {1 : unpack_energino_ethernet_v1},
-          "EnerginoYun" : {1 : unpack_energino_yun_v1}}
+MODELS = {"Energino": {1: unpack_energino_v1},
+          "EnerginoAbs": {1: unpack_energino_abs_v1},
+          "EnerginoEthernet": {1: unpack_energino_ethernet_v1},
+          "EnerginoYun": {1: unpack_energino_yun_v1}}
+
 
 class PyEnergino(object):
     """ Energino class. """
@@ -170,19 +201,20 @@ class PyEnergino(object):
             line = self.ser.readline()
             logging.debug("line: %s", line.replace('\n', ''))
 
-            if (type(line) is str
-                and len(line) > 0
-                and line[0] == "#"
-                and line[-1] == '\n'):
+            if type(line) is str and \
+               len(line) > 0 and \
+               line[0] == "#" and \
+               line[-1] == '\n':
 
                 readings = line[1:-1].split(",")
 
-                if (readings[0] in MODELS.keys()
-                    and readings[1].isdigit()
-                    and int(readings[1]) in MODELS[readings[0]]):
+                if readings[0] in MODELS.keys() and \
+                   readings[1].isdigit() and \
+                   int(readings[1]) in MODELS[readings[0]]:
 
-                    logging.debug("found %s version %s", readings[0],
-                                                         readings[1])
+                    logging.debug("found %s version %s",
+                                  readings[0],
+                                  readings[1])
 
                     self.unpack = MODELS[readings[0]][int(readings[1])]
                     return
@@ -199,18 +231,21 @@ class PyEnergino(object):
         """ Read from serial port. """
 
         readings = self.unpack(self.ser.readline())
+
         readings['port'] = self.ser.port
         readings['at'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         delta = math.fabs(self.interval - readings['window'])
 
         if delta / self.interval > 0.1:
-            logging.debug("Target polling %u actual %u", self.interval,
-                                                         readings['window'])
+            logging.debug("Target polling %u actual %u",
+                          self.interval,
+                          readings['window'])
 
-        if field != None:
+        if field is not None:
             return readings[field]
 
         return readings
+
 
 def main():
     """ Launcher method. """
@@ -250,9 +285,10 @@ def main():
     options, _ = parser.parse_args()
     init = []
 
-    if options.offset != None:
+    if options.offset is not None:
         init.append("#C%u" % options.offset)
-    if options.sensitivity != None:
+
+    if options.sensitivity is not None:
         init.append("#D%u" % options.sensitivity)
 
     if options.verbose:
@@ -268,37 +304,51 @@ def main():
     energino = PyEnergino(options.port, options.bps, options.interval)
     energino.send_cmds(init)
 
-    if options.matlab != None:
+    if options.matlab is not None:
         mat = []
 
     while True:
+
         energino.ser.flushInput()
+
         try:
+
             readings = energino.fetch()
+
         except KeyboardInterrupt:
+
             logging.debug("Bye!")
             sys.exit()
+
         except:
-            logging.debug("0 [V] 0 [A] 0 [W] 0 [samples] 0 [window]")
+
+            logging.debug("0 [V] 0 [A] 0 [W] 0 [samples] 0 [window] "
+                          "[0] [mV] 0 [mA] 0 [%]")
+
         else:
 
             line = (readings['voltage'],
                     readings['current'],
                     readings['power'],
                     readings['samples'],
-                    readings['window'])
+                    readings['window'],
+                    readings['v_error'],
+                    readings['i_error'],
+                    readings['battery'],
+                    readings['fitted'])
 
-            if options.matlab != None:
+            if options.matlab is not None:
                 mat.append(line)
 
-            log = "%s [V] %s [A] %s [W] %s [samples] %s [window]" % line
+            log = "%s [V] %s [A] %s [W] %s [samples] %s [window] %s [mV] " \
+                  "%s [mA] %s [%%] %s [m]" % line
 
             logging.info(log)
 
-        if options.matlab != None:
+        if options.matlab is not None:
             import numpy as np
             import scipy.io
-            scipy.io.savemat(options.matlab, {'READINGS' : np.array(mat)},
+            scipy.io.savemat(options.matlab, {'READINGS': np.array(mat)},
                              oned_as='column')
 
 if __name__ == "__main__":
