@@ -29,6 +29,7 @@
  */
 
 #include <energino.h>
+#include <EEPROM.h>
 
 #define RELAYPIN      2
 #define CURRENTPIN    A0
@@ -39,7 +40,7 @@ int R1 = 351;
 int R2 = 159;
 int OFFSET = 2522;
 int SENSITIVITY = 68;
-int PERIOD = 2000;
+int PERIOD = 15000;
 
 // Running averages
 long VRaw = 0;
@@ -61,8 +62,10 @@ void reset() {
   settings.relaypin = RELAYPIN;
   settings.currentpin = CURRENTPIN;
   settings.voltagepin = VOLTAGEPIN;
+  resetAccum();
 }
 
+const long CAPACITY= 1825335;
 const int SIZE = 60;
 const double DISCARGE[SIZE] = { 11.80955, 11.73545, 11.68159, 11.63941, 11.60351, 11.57391, 11.54949, 11.52911, 11.50617, 11.4875, 11.46275, 11.43834, 11.41059, 11.38791, 11.36826, 11.34609, 11.3312, 11.31662, 11.29723, 11.27976, 11.2605, 11.23614, 11.21343, 11.18729, 11.16382, 11.13759, 11.11293, 11.08473, 11.05694, 11.02778, 11.00032, 10.96197, 10.94706, 10.91152, 10.88357, 10.85808, 10.82778, 10.79685, 10.76562, 10.73019, 10.69061, 10.64628, 10.58518, 10.61087, 10.53965, 10.47965, 10.41535, 10.34984, 10.30516, 10.23873, 10.17664, 10.11481, 10.04997, 9.98091, 9.90735, 9.81934, 9.73173, 9.53416, 9.07717, 8.5747 };
 
@@ -97,7 +100,10 @@ void loop() {
     // Conversion
     VFinal = double(VRaw) / samples;
     IFinal = double(IRaw) / samples;
+    IFinal = 789;
     lastSamples = samples;
+    // Update accum power
+    updateAccum(getAvgPower(VFinal, IFinal) * ((double) settings.period / 1000));
     // dump to serial
     dumpToSerialBatt();
     // reset counters
@@ -108,21 +114,52 @@ void loop() {
   }
 }
 
-int MAX_V_BATT = 12;
-int MIN_V_BATT = 10;
+long testAccum() {
+  uint8_t *ptr = (uint8_t *) &settings;
+  ptr += sizeof(settings);
+  return eeprom_read_dword((uint32_t *) ptr);
+}
 
-double a =  1 / double(MAX_V_BATT -  MIN_V_BATT);
-double b = 1 - a * MAX_V_BATT;
+void resetAccum() {
+  uint8_t *ptr = (uint8_t *) &settings;
+  ptr += sizeof(settings);
+  eeprom_write_dword((uint32_t *) ptr, 0);
+}
 
-// coumpute battery percentage
-double getBatteryFitted(double VFinal) {
-    if (VFinal > MAX_V_BATT) {
-      return 1.0;
-    }
-    if (VFinal < MIN_V_BATT) {
-      return 0.0;
-    }
-    return a * VFinal - b;
+void updateAccum(long value) {
+  uint8_t *ptr = (uint8_t *) &settings;
+  ptr += sizeof(settings);
+  long accum = eeprom_read_dword((uint32_t *) ptr);
+  Serial.print("@accum: ");
+  Serial.println(accum);
+  eeprom_write_dword((uint32_t *) ptr, accum + value);
+}
+
+// coumpute battery fitted percentage
+long getBatteryFitted() {
+  // if current is below threshold then return -1
+  if (getAvgCurrent(IFinal) < 0.1) {
+    return -1;
+  }
+  // consumed so far
+  long accum = testAccum();
+  long remaining = CAPACITY - accum;
+  // if remaining time is negative then return 0 (this should not really happen
+  // very often)
+  if (remaining < 0) {
+    return 0;
+  }
+  // consumed last round
+  double last = (getAvgPower(VFinal, IFinal) * ((double) settings.period / 1000));
+  // remaining units
+  double units = remaining / last;
+  // remaining minutes
+  long minutes = (units * ((double) settings.period / 1000)) / 60;
+  // if remaining minutes are less then 10, then return 0
+  if (minutes < 10) {
+    return 0;
+  }
+  return minutes;
 }
 
 // coumpute battery percentage
@@ -165,7 +202,7 @@ void dumpToSerialBatt() {
   Serial.print(",");
   Serial.print(getBattery(VFinal), 2);
   Serial.print(",");
-  Serial.print(getBatteryFitted(VFinal), 2);
+  Serial.print(getBatteryFitted());
   Serial.print("\n");
 }
 
