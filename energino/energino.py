@@ -57,14 +57,28 @@ def unpack_energino_v1(line):
         readings = line[1:-1].split(",")
 
         if len(readings) == 10:
-            return {'voltage': float(readings[2]),
-                    'current': float(readings[3]),
-                    'power': float(readings[4]),
-                    'switch': int(readings[5]),
-                    'window': int(readings[6]),
-                    'samples': int(readings[7]),
-                    'v_error': int(readings[8]),
-                    'i_error': int(readings[9])}
+
+            readings = {'voltage': float(readings[2]),
+                        'current': float(readings[3]),
+                        'power': float(readings[4]),
+                        'switch': int(readings[5]),
+                        'window': int(readings[6]),
+                        'samples': int(readings[7]),
+                        'v_error': int(readings[8]),
+                        'i_error': int(readings[9])}
+
+            line = (readings['voltage'],
+                    readings['current'],
+                    readings['power'],
+                    readings['samples'],
+                    readings['window'],
+                    readings['v_error'],
+                    readings['i_error'])
+
+            log = "%s [V] %s [A] %s [W] %s [samples] %s [window] %s [mV] " \
+                  "%s [mA]" % line
+
+            return readings, line, log
 
     raise ValueError("invalid line: %s" % line[0:-1])
 
@@ -80,16 +94,32 @@ def unpack_energino_abs_v1(line):
         readings = line[1:-1].split(",")
 
         if len(readings) == 12:
-            return {'voltage': float(readings[2]),
-                    'current': float(readings[3]),
-                    'power': float(readings[4]),
-                    'switch': int(readings[5]),
-                    'window': int(readings[6]),
-                    'samples': int(readings[7]),
-                    'v_error': int(readings[8]),
-                    'i_error': int(readings[9]),
-                    'battery': float(readings[10]),
-                    'fitted': float(readings[11])}
+
+            readings = {'voltage': float(readings[2]),
+                        'current': float(readings[3]),
+                        'power': float(readings[4]),
+                        'switch': int(readings[5]),
+                        'window': int(readings[6]),
+                        'samples': int(readings[7]),
+                        'v_error': int(readings[8]),
+                        'i_error': int(readings[9]),
+                        'battery': float(readings[10]),
+                        'fitted': int(readings[11])}
+
+            line = (readings['voltage'],
+                    readings['current'],
+                    readings['power'],
+                    readings['samples'],
+                    readings['window'],
+                    readings['v_error'],
+                    readings['i_error'],
+                    readings['battery'],
+                    readings['fitted'])
+
+            log = "%s [V] %s [A] %s [W] %s [samples] %s [window] %s [mV] " \
+                  "%s [mA] %s [%%] %s [m]" % line
+
+            return readings, line, log
 
     raise ValueError("invalid line: %s" % line[0:-1])
 
@@ -105,19 +135,31 @@ def unpack_energino_ethernet_v1(line):
        line[-1] == '\n':
 
         readings = line[1:-1].split(",")
+
         if len(readings) == 14:
-            return {'voltage': float(readings[2]),
-                    'current': float(readings[3]),
-                    'power': float(readings[4]),
-                    'switch': int(readings[5]),
-                    'window': int(readings[6]),
-                    'samples': int(readings[7]),
-                    'ip': readings[8],
-                    'server_port': readings[9],
-                    'host': readings[10],
-                    'host_port': readings[11],
-                    'feed': readings[12],
-                    'key': readings[13]}
+
+            readings = {'voltage': float(readings[2]),
+                        'current': float(readings[3]),
+                        'power': float(readings[4]),
+                        'switch': int(readings[5]),
+                        'window': int(readings[6]),
+                        'samples': int(readings[7]),
+                        'ip': readings[8],
+                        'server_port': readings[9],
+                        'host': readings[10],
+                        'host_port': readings[11],
+                        'feed': readings[12],
+                        'key': readings[13]}
+
+            line = (readings['voltage'],
+                    readings['current'],
+                    readings['power'],
+                    readings['samples'],
+                    readings['window'])
+
+            log = "%s [V] %s [A] %s [W] %s [samples] %s [window]" % line
+
+            return readings, line, log
 
     raise ValueError("invalid line: %s" % line[0:-1])
 
@@ -175,7 +217,6 @@ class PyEnergino(object):
             self.ser.open()
             time.sleep(2)
             self.configure()
-            self.send_cmds(["#P%u" % self.interval])
             logging.debug("attaching to port %s!", dev)
             return
 
@@ -227,10 +268,10 @@ class PyEnergino(object):
         self.ser.flushOutput()
         self.ser.write(value)
 
-    def fetch(self, field=None):
+    def fetch(self):
         """ Read from serial port. """
 
-        readings = self.unpack(self.ser.readline())
+        readings, line, log = self.unpack(self.ser.readline())
 
         readings['port'] = self.ser.port
         readings['at'] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -241,10 +282,7 @@ class PyEnergino(object):
                           self.interval,
                           readings['window'])
 
-        if field is not None:
-            return readings[field]
-
-        return readings
+        return readings, line, log
 
 
 def main():
@@ -268,6 +306,16 @@ def main():
                       type="int",
                       default=None)
 
+    parser.add_option('--reset', '-r',
+                      dest="reset",
+                      action="store_true",
+                      default=False)
+
+    parser.add_option('--lines', '-k',
+                      dest="lines",
+                      type="int",
+                      default=None)
+
     parser.add_option('--bps', '-b',
                       dest="bps",
                       type="int",
@@ -284,6 +332,11 @@ def main():
 
     options, _ = parser.parse_args()
     init = []
+
+    if options.reset:
+        init.append("#R")
+
+    init.append("#P%u" % options.interval)
 
     if options.offset is not None:
         init.append("#C%u" % options.offset)
@@ -307,44 +360,26 @@ def main():
     if options.matlab is not None:
         mat = []
 
+    lines = 0
+
     while True:
 
         energino.ser.flushInput()
 
         try:
-
-            readings = energino.fetch()
-
+            readings, line, log = energino.fetch()
         except KeyboardInterrupt:
-
             logging.debug("Bye!")
             sys.exit()
-
         except:
-
-            logging.debug("0 [V] 0 [A] 0 [W] 0 [samples] 0 [window] "
-                          "[0] [mV] 0 [mA] 0 [%]")
-
+            pass
         else:
-
-            line = (readings['voltage'],
-                    readings['current'],
-                    readings['power'],
-                    readings['samples'],
-                    readings['window'],
-                    readings['v_error'],
-                    readings['i_error'],
-                    readings['battery'],
-                    readings['fitted'])
-
             if options.matlab is not None:
                 mat.append(line)
-
-            log = "%s [V] %s [A] %s [W] %s [samples] %s [window] %s [mV] " \
-                  "%s [mA] %s [%%] %s [m]" % line
-
             logging.info(log)
-
+            lines = lines + 1
+            if options.lines and lines >= options.lines:
+                break
         if options.matlab is not None:
             import numpy as np
             import scipy.io
