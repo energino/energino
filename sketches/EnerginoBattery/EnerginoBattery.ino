@@ -100,7 +100,6 @@ void loop() {
     // Conversion
     VFinal = double(VRaw) / samples;
     IFinal = double(IRaw) / samples;
-    IFinal = 789;
     lastSamples = samples;
     // Update accum power
     updateAccum(getAvgPower(VFinal, IFinal) * ((double) settings.period / 1000));
@@ -130,8 +129,6 @@ void updateAccum(long value) {
   uint8_t *ptr = (uint8_t *) &settings;
   ptr += sizeof(settings);
   long accum = eeprom_read_dword((uint32_t *) ptr);
-  Serial.print("@accum: ");
-  Serial.println(accum);
   eeprom_write_dword((uint32_t *) ptr, accum + value);
 }
 

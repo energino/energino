@@ -59,7 +59,7 @@
 
 #define APIKEY        "foo"
 #define FEEDID        0
-#define FEEDSURL      "https://api.xively.com/v2/feeds/"
+#define FEEDURL      "https://api.xively.com/v2/feeds/"
 
 #define RELAYPIN      4
 #define CURRENTPIN    A2
@@ -81,7 +81,7 @@ const char MAGIC[] = "EnerginoPOE";
 const int REVISION = 1;
 
 // Moving averages
-const int SMAPOINTS = 40;
+const int SMAPOINTS = 101;
 SMA v_sma(SMAPOINTS);
 SMA i_sma(SMAPOINTS);
 
@@ -101,7 +101,7 @@ void reset() {
   settings.voltagepin = VOLTAGEPIN;
   strcpy (settings.apikey, APIKEY);
   settings.feedid = FEEDID;
-  strcpy (settings.feedsurl, FEEDSURL);
+  strcpy (settings.feedurl, FEEDURL);
 }
 
 // Instantiate a server enabling the the Yun to listen for connected clients.
@@ -158,9 +158,20 @@ void loop() {
   }
   // Parse incoming commands
   serParseCommand(AREF);
+  // if feed is set, the turn yellow led on
+  if (settings.feedid > 0)
+    digitalWrite(YELLOWLED, LOW);
+  else
+    digitalWrite(YELLOWLED, HIGH);
+  // set poe led
+  if (digitalRead(settings.relaypin) == 0)
+    digitalWrite(REDLED, LOW);
+  else
+    digitalWrite(REDLED, HIGH);
   // Instant values are too floating,
   // let's smooth them up
   int v = analogRead(settings.voltagepin);
+  Serial.println(v);
   int i = analogRead(settings.currentpin);
   v_sma.add(v);
   i_sma.add(i);
@@ -172,10 +183,6 @@ void loop() {
     // dump to serial
     dumpToSerial(AREF);
     // send data to remote host
-    if (settings.feedid > 0)
-      digitalWrite(YELLOWLED, LOW);
-    else
-      digitalWrite(YELLOWLED, HIGH);
     sendData(AREF);
     // set last update
     lastUpdated = millis();

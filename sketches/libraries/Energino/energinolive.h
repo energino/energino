@@ -88,27 +88,34 @@ void sendData(int aref) {
   apiString += settings.apikey;
 
   // form the string for the URL parameter:
-  String url = settings.feedsurl;
+  String url = settings.feedurl;
   url += settings.feedid;
   url += ".csv";
 
+  char buffer[10];
   String dataString = "";
 
   // form the string for the payload
   dataString = "current,";
-  dataString += getAvgCurrent(IFinal, aref);
+  dtostrf(getAvgCurrent(IFinal, aref), 2, 3, buffer);
+  dataString += buffer;
+
   dataString += "\nvoltage,";
-  dataString += getAvgVoltage(VFinal, aref);
+  dtostrf(getAvgVoltage(VFinal, aref), 2, 3, buffer);
+  dataString += buffer;
+
   dataString += "\npower,";
-  dataString += getAvgPower(VFinal, IFinal, aref);;
+  dtostrf(getAvgPower(VFinal, IFinal, aref), 2, 2, buffer);
+  dataString += buffer;
+
   dataString += "\nswitch,";
   dataString += digitalRead(settings.relaypin);
 
   // Is better to declare the Process here, so when the
   // sendData function finishes the resources are immediately
   // released. Declaring it global works too, BTW.
+  Serial.print("@sending...");
   Process xively;
-  Serial.print("Sending data... ");
   xively.begin("curl");
   xively.addParameter("-k");
   xively.addParameter("--request");
@@ -119,8 +126,7 @@ void sendData(int aref) {
   xively.addParameter(apiString);
   xively.addParameter(url);
   xively.run();
-  Serial.println("done!");
-
+  Serial.println(" done");
 }
 
 void sendData() {

@@ -38,7 +38,7 @@ struct settings_t {
   int voltagepin;
   char apikey[49];
   unsigned long feedid;
-  char feedsurl[60];
+  char feedurl[60];
 } settings;
 
 void reset();
@@ -132,6 +132,12 @@ void dumpSettings() {
   Serial.println(settings.currentpin);
   Serial.print("@voltagepin: ");
   Serial.println(settings.voltagepin);
+  Serial.print("@apikey: ");
+  Serial.println(settings.apikey);
+  Serial.print("@feedid: ");
+  Serial.println(settings.feedid);
+  Serial.print("@feedurl: ");
+  Serial.println(settings.feedurl);
 }
 
 // parse serial CLI command
@@ -196,8 +202,8 @@ void serParseCommand(int aref)
     settings.apikey[48] = '\0';
   }
   else if (cmd == 'U') {
-    strncpy(settings.feedsurl, inputBytes,60);
-    settings.feedsurl[59] = '\0';
+    strncpy(settings.feedurl, inputBytes,60);
+    settings.feedurl[59] = '\0';
   }
   else {
     int value = atoi(inputBytesPtr);
