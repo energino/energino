@@ -164,34 +164,11 @@ def unpack_energino_ethernet_v1(line):
     raise ValueError("invalid line: %s" % line[0:-1])
 
 
-def unpack_energino_yun_v1(line):
-    """ Unpack Energino YUN status line. """
-
-    logging.debug("line: %s", line.replace('\n', ''))
-
-    if type(line) is str and \
-       len(line) > 0 and \
-       line[0] == "#" and \
-       line[-1] == '\n':
-
-        readings = line[1:-1].split(",")
-        if len(readings) == 11:
-            return {'voltage': float(readings[2]),
-                    'current': float(readings[3]),
-                    'power': float(readings[4]),
-                    'switch': int(readings[5]),
-                    'window': int(readings[6]),
-                    'samples': int(readings[7]),
-                    'feed': readings[8],
-                    'url': readings[9],
-                    'key': readings[10]}
-
-    raise ValueError("invalid line: %s" % line[0:-1])
-
 MODELS = {"Energino": {1: unpack_energino_v1},
           "EnerginoAbs": {1: unpack_energino_abs_v1},
           "EnerginoEthernet": {1: unpack_energino_ethernet_v1},
-          "EnerginoYun": {1: unpack_energino_yun_v1}}
+          "EnerginoPOE": {1: unpack_energino_v1},
+          "EnerginoYun": {1: unpack_energino_v1}}
 
 
 class PyEnergino(object):
@@ -321,14 +298,14 @@ def main():
                       type="int",
                       default=DEFAULT_DEVICE_SPEED_BPS)
 
-    parser.add_option('--matlab', '-t', dest="matlab")
-
     parser.add_option('--verbose', '-v',
                       action="store_true",
                       dest="verbose",
                       default=False)
 
     parser.add_option('--log', '-l', dest="log")
+
+    parser.add_option('--csv', '-c', dest="csv")
 
     options, _ = parser.parse_args()
     init = []
@@ -357,10 +334,10 @@ def main():
     energino = PyEnergino(options.port, options.bps, options.interval)
     energino.send_cmds(init)
 
-    if options.matlab is not None:
-        mat = []
-
     lines = 0
+
+    if options.csv:
+        csv_file = open(options.csv, "w")
 
     while True:
 
@@ -369,22 +346,22 @@ def main():
         try:
             readings, line, log = energino.fetch()
         except KeyboardInterrupt:
+            if options.csv:
+                csv_file.close()
             logging.debug("Bye!")
             sys.exit()
         except:
             pass
         else:
-            if options.matlab is not None:
-                mat.append(line)
             logging.info(log)
+            if options.csv:
+                csv_file.write(",".join([str(x) for x in line]))
             lines = lines + 1
             if options.lines and lines >= options.lines:
                 break
-        if options.matlab is not None:
-            import numpy as np
-            import scipy.io
-            scipy.io.savemat(options.matlab, {'READINGS': np.array(mat)},
-                             oned_as='column')
+
+    if options.csv:
+        csv_file.close()
 
 if __name__ == "__main__":
     main()
