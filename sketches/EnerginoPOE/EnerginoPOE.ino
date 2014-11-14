@@ -171,7 +171,6 @@ void loop() {
   // Instant values are too floating,
   // let's smooth them up
   int v = analogRead(settings.voltagepin);
-  Serial.println(v);
   int i = analogRead(settings.currentpin);
   v_sma.add(v);
   i_sma.add(i);

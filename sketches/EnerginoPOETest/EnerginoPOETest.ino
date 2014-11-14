@@ -14,7 +14,7 @@
 
 #define APIKEY        "foo"
 #define FEEDID        0
-#define FEEDURL      "https://api.xively.com/v2/feeds/"
+#define FEEDURL      "https://192.168.9.80:5533/v2/feeds/"
 
 #define RELAYPIN      4
 #define CURRENTPIN    A2
@@ -66,16 +66,13 @@ void setup() {
   // Resetting board
   Serial.println("Resetting board...");
   reset();
+  saveSettings();
   // Set external reference
   Serial.println("Setting external reference...");
   analogReference(EXTERNAL);
   // Loading setting
   Serial.println("Loading settings...");
   loadSettings();
-  if (strcmp(settings.magic, MAGIC) != 0) {
-    reset();
-    saveSettings();
-  }
   // Default on
   Serial.println("Setting relay pin as output...");
   pinMode(settings.relaypin, OUTPUT);
@@ -211,6 +208,7 @@ void loop() {
   Serial.print(",");
   Serial.println(settings.sensitivity);
   Serial.println("************************************************");
+  saveSettings();
   Serial.println("Done!");
   delay(1000);
   digitalWrite(GREENLED, LOW);
