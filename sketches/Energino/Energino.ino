@@ -77,20 +77,20 @@ void setup() {
   digitalWrite(settings.relaypin, LOW);
   // Use the led 13 to notify that the
   // setup completed
-  pinMode(13,OUTPUT);
+  pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
   // Set last update to now
   lastUpdated = millis();
 }
 
 void loop() {
-  // Parse incoming commands
-  serParseCommand();
   // accumulate readings
   VRaw += analogRead(VOLTAGEPIN);
   IRaw += analogRead(CURRENTPIN);
   samples++;
   if (lastUpdated + settings.period <= millis()) {
+    // Parse incoming commands
+    serParseCommand();
     // Conversion
     VFinal = double(VRaw) / samples;
     IFinal = double(IRaw) / samples;

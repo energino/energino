@@ -149,13 +149,19 @@ void serParseCommand(int aref)
   }
   // working vars
   char cmd = '\0';
-  int i, serAva;
-  char inputBytes[60] = {'\0'};
-  char * inputBytesPtr = &inputBytes[0];
+  char buf[60] = {'\0'};
+  char valueBuf[58] = {'\0'};
+  char * valueBufPtr = &valueBuf[0];
+  int i;
   // read command from serial
-  serAva = Serial.available();
-  for (i = 0; i < serAva; i++) {
-    char chr = Serial.read();
+  String str = Serial.readStringUntil('\n');
+  str.toCharArray(buf, 60);
+  // parse incoming string char by char
+  for (i = 0; i < 58; i++) {
+    char chr = buf[i];
+    if (chr == '\0') {
+      break;
+    }
     if (i == 0) {
       if (chr != '#') {
         return;
@@ -168,11 +174,11 @@ void serParseCommand(int aref)
       cmd = chr;
     }
     else{
-      inputBytes[i-2] = chr;
+      valueBuf[i-2] = chr;
     }
   }
   // null-terminate input buffer
-  inputBytes[i] = '\0';
+  valueBuf[i] = '\0';
   // execute command
   if (cmd == 'R') {
     Serial.println("@reset");
@@ -192,63 +198,81 @@ void serParseCommand(int aref)
     settings.offset = v_out;
   }
   else if (cmd == 'F') {
-    long value = atol(inputBytesPtr);
+    long value = atol(valueBufPtr);
     if (value >= 0) {
       settings.feedid = value;
     }
   }
   else if (cmd == 'K') {
-    strncpy(settings.apikey, inputBytes,49);
+    strncpy(settings.apikey, valueBuf,49);
     settings.apikey[48] = '\0';
   }
   else if (cmd == 'U') {
-    strncpy(settings.feedurl, inputBytes,60);
+    strncpy(settings.feedurl, valueBuf,60);
     settings.feedurl[59] = '\0';
   }
-  else {
-    int value = atoi(inputBytesPtr);
+  else if (cmd == 'P') {
+    int value = atoi(valueBufPtr);
     if (value < 0) {
       return;
     }
-    if (cmd == 'P') {
-      settings.period = value;
-      Serial.print("@period: ");
-      Serial.print(settings.period);
-      Serial.println("ms");
+    settings.period = value;
+    Serial.print("@period: ");
+    Serial.print(settings.period);
+    Serial.println("ms");
+  }
+  else if (cmd == 'A') {
+    int value = atoi(valueBufPtr);
+    if (value < 0) {
+      return;
     }
-    else if (cmd == 'A') {
-      settings.r1 = value;
-      Serial.print("R1: ");
-      Serial.print(settings.r1);
-      Serial.println(" Kohm");
+    settings.r1 = value;
+    Serial.print("R1: ");
+    Serial.print(settings.r1);
+    Serial.println(" Kohm");
+  }
+  else if (cmd == 'B') {
+    int value = atoi(valueBufPtr);
+    if (value < 0) {
+      return;
     }
-    else if (cmd == 'B') {
-      settings.r2 = value;
-      Serial.print("R2: ");
-      Serial.print(settings.r2);
-      Serial.println(" Kohm");
+    settings.r2 = value;
+    Serial.print("R2: ");
+    Serial.print(settings.r2);
+    Serial.println(" Kohm");
+  }
+  else if (cmd == 'C') {
+    int value = atoi(valueBufPtr);
+    if (value < 0) {
+      return;
     }
-    else if (cmd == 'C') {
-      settings.offset = value;
-      Serial.print("Offeset: ");
-      Serial.print(settings.offset);
-      Serial.println(" mV");
+    settings.offset = value;
+    Serial.print("Offeset: ");
+    Serial.print(settings.offset);
+    Serial.println(" mV");
+  }
+  else if (cmd == 'D') {
+    int value = atoi(valueBufPtr);
+    if (value < 0) {
+      return;
     }
-    else if (cmd == 'D') {
-      settings.sensitivity = value;
-      Serial.print("Sensitivity: ");
-      Serial.print(settings.sensitivity);
-      Serial.println(" mV/A");
+    settings.sensitivity = value;
+    Serial.print("Sensitivity: ");
+    Serial.print(settings.sensitivity);
+    Serial.println(" mV/A");
+  }
+  else if (cmd == 'S') {
+    int value = atoi(valueBufPtr);
+    if (value < 0) {
+      return;
     }
-    else if (cmd == 'S') {
-      if (value > 0) {
-        Serial.println("@switch: high");
-        digitalWrite(settings.relaypin, HIGH);
-      }
-      else {
-        Serial.println("@switch: low");
-        digitalWrite(settings.relaypin, LOW);
-      }
+    if (value > 0) {
+      Serial.println("@switch: high");
+      digitalWrite(settings.relaypin, HIGH);
+    }
+    else {
+      Serial.println("@switch: low");
+      digitalWrite(settings.relaypin, LOW);
     }
   }
   saveSettings();
