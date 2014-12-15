@@ -355,7 +355,7 @@ def main():
         else:
             logging.info(log)
             if options.csv:
-                csv_file.write(",".join([str(x) for x in line]))
+                csv_file.write("%s\n" % ",".join([str(x) for x in line]))
             lines = lines + 1
             if options.lines and lines >= options.lines:
                 break
