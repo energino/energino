@@ -43,6 +43,8 @@ struct settings_t {
 
 void reset();
 
+void factoryCheck();
+
 double res(int aref) {
   return aref / 1024.0;
 }
@@ -183,6 +185,11 @@ void serParseCommand(int aref)
   if (cmd == 'R') {
     Serial.println("@reset");
     reset();
+  }
+  // execute command
+  if (cmd == 'H') {
+    Serial.println("@Factory check");
+    factoryCheck();
   }
   else if (cmd == 'Z') {
     dumpSettings();

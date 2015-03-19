@@ -44,7 +44,7 @@
  *
  * created 22 August 2014
  * by Roberto Riggio
- *
+ *j, 
  * This code is released under the BSD Licence
  *
  */
@@ -54,12 +54,13 @@
 #include <YunClient.h>
 #include <energino.h>
 #include <energinolive.h>
-#include <sma.h>
-#include <MemoryFree.h>
-
+#include <energinopoetest.h>
+#include <sma.h>  
+  
 #define APIKEY        "foo"
 #define FEEDID        0
-#define FEEDURL      "https://api.xively.com/v2/feeds/"
+#define FEEDURL      "http://192.168.100.158:5533/v2/feeds/"
+//#define FEEDURL      "https://api.xively.com/v2/feeds/"
 
 #define RELAYPIN      4
 #define CURRENTPIN    A2
@@ -81,7 +82,7 @@ const char MAGIC[] = "EnerginoPOE";
 const int REVISION = 1;
 
 // Moving averages
-const int SMAPOINTS = 101;
+const int SMAPOINTS = 21;
 SMA v_sma(SMAPOINTS);
 SMA i_sma(SMAPOINTS);
 
@@ -141,6 +142,72 @@ void setup() {
   lastUpdated = millis();
 }
 
+void factoryCheck() {
+
+  // Resetting board
+  Serial.println("Resetting board...");
+  reset();
+  saveSettings();
+
+  // Loading setting
+  Serial.println("Loading settings...");
+  loadSettings();
+
+  // Default on
+  Serial.println("Setting relay pin as output...");
+  pinMode(settings.relaypin, OUTPUT);
+  digitalWrite(settings.relaypin, LOW);
+
+  // Set defaults
+  Serial.println("Setting defaults...");
+  pinMode(13, OUTPUT);
+  digitalWrite(13, HIGH);
+  pinMode(GREENLED, OUTPUT);
+  digitalWrite(GREENLED, HIGH);
+  pinMode(YELLOWLED, OUTPUT);
+  digitalWrite(YELLOWLED, HIGH);
+  pinMode(REDLED, OUTPUT);
+  digitalWrite(REDLED, HIGH);
+
+  // Dump settings
+  Serial.println("Dump settings...");
+  dumpSettings();
+
+  Serial.println("************************************************");
+  Serial.println("Testing green led, blinking 3 times...");
+  testBlink(GREENLED);
+  Serial.println("Testing yellow led, blinking 3 times...");
+  testBlink(YELLOWLED);
+  Serial.println("Testing red led, blinking 3 times...");
+  testBlink(REDLED);
+  Serial.println("************************************************");
+  Serial.println("Testing switch...");
+  testSwitch();
+  Serial.println("************************************************");
+  Serial.println("Setting offset...");
+  tuneOffset(AREF);
+  Serial.println("************************************************");
+  Serial.println("Setting voltage divider...");
+  tuneDividerGain(AREF);
+  Serial.println("************************************************");
+  Serial.println("Configuration string:");
+  Serial.print(settings.r1);
+  Serial.print(",");
+  Serial.print(settings.r2);
+  Serial.print(",");
+  Serial.print(settings.offset);
+  Serial.print(",");
+  Serial.println(settings.sensitivity);
+  Serial.println("************************************************");
+  saveSettings();
+  Serial.println("Done!");
+
+  // Set green led back on
+  pinMode(GREENLED, OUTPUT);
+  digitalWrite(GREENLED, LOW);
+
+}
+
 void loop() {
   // Make sure that update period is not too high
   // when pushing data to Xively 
@@ -186,5 +253,6 @@ void loop() {
     // set last update
     lastUpdated = millis();
   }
+
 }
 

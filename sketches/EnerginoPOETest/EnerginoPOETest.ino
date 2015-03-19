@@ -14,7 +14,7 @@
 
 #define APIKEY        "foo"
 #define FEEDID        0
-#define FEEDURL      "https://192.168.9.80:5533/v2/feeds/"
+#define FEEDURL      "https://192.168.100.158:5533/v2/feeds/"
 
 #define RELAYPIN      4
 #define CURRENTPIN    A2

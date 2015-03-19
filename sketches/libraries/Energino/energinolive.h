@@ -114,7 +114,8 @@ void sendData(int aref) {
   // Is better to declare the Process here, so when the
   // sendData function finishes the resources are immediately
   // released. Declaring it global works too, BTW.
-  Serial.print("@sending...");
+  Serial.print("@sending to ");
+  Serial.print(url);
   Process xively;
   xively.begin("curl");
   xively.addParameter("-k");
