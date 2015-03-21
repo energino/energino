@@ -15,6 +15,7 @@
  *  #C<integer>, sets the current sensor offset in mV [default is 2500]
  *  #D<integer>, sets the current sensor sensitivity in mV [default is 185]
  *  #R, reset the configuration to the defaults
+    #H, run factory test for Energino, do not connect any load while running
  *  #T, self-tune the current sensor offset (use with no load attached)
  *  #Z, print settings
  *  #F<feed>, sets the feed id [default is 0]

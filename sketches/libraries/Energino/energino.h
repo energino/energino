@@ -1,6 +1,6 @@
 /*
-  energino.h - Library for Energino devices
-  */
+ * energino.h - Library for Energino devices
+ */
 
 #ifndef ENERGINO_H
 #define ENERGINO_H

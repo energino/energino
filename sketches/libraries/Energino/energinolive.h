@@ -1,6 +1,6 @@
 /*
-  energinolive.h - Library for Energino devices (live services)
-*/
+ * energinolive.h - Library for Energino devices (live services)
+ */
 
 #include <energino.h>
 
@@ -73,7 +73,7 @@ void process(YunClient client, int aref) {
 }
 
 void process(YunClient client) {
-    process(client, DEFAULT_AREF);
+  process(client, DEFAULT_AREF);
 }
 
 // this method makes a HTTP connection to the server:

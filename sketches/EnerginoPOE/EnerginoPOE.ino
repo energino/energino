@@ -18,6 +18,7 @@
  *  #C<integer>, sets the current sensor offset in mV [default is 2500]
  *  #D<integer>, sets the current sensor sensitivity in mV [default is 185]
  *  #R, reset the configuration to the defaults
+*   #H, run factory test for Energino, do not connect any load while running
  *  #T, self-tune the current sensor offset (use with no load attached)
  *  #Z, print settings
  *  #F<feed>, sets the feed id [default is 0]
@@ -44,7 +45,7 @@
  *
  * created 22 August 2014
  * by Roberto Riggio
- *j, 
+ *j,
  * This code is released under the BSD Licence
  *
  */
@@ -55,8 +56,8 @@
 #include <energino.h>
 #include <energinolive.h>
 #include <energinopoetest.h>
-#include <sma.h>  
-  
+#include <sma.h>
+
 #define APIKEY        "foo"
 #define FEEDID        0
 #define FEEDURL      "http://192.168.100.158:5533/v2/feeds/"
@@ -210,7 +211,7 @@ void factoryCheck() {
 
 void loop() {
   // Make sure that update period is not too high
-  // when pushing data to Xively 
+  // when pushing data to Xively
   if ((settings.feedid != 0) && (settings.period < PERIOD)) {
     settings.period = PERIOD;
   }

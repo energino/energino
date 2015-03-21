@@ -1,6 +1,6 @@
 /*
-  sma.h - Moving Average Filter
-*/
+ * sma.h - Moving Average Filter
+ */
 
 #ifndef SMA_H
 #define SMA_H
