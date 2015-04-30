@@ -65,6 +65,8 @@ void reset() {
   settings.voltagepin = VOLTAGEPIN;
 }
 
+void factoryCheck() {}
+
 void setup() {
   // Set serial port
   Serial.begin(115200);

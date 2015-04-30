@@ -1,12 +1,9 @@
 /*
- * Energino
+ * EnerginoEthernet
  *
- * Energino is a energy consumption meter for DC loads
- *
- * This sketch connects an Arduino equipped with the Energino 
- * shield and with an Ethernet shield with a web service 
- * implementing the COSM (formely Pachube) REST API. It also
- * implements a serial interface.
+ * This sketch connects an Arduino equipped with the Energino shield and with 
+ * an Ethernet shield with a web service implementing the Xively REST API. It 
+ * also implements a serial interface.
  *
  * Circuit:
  *  Analog inputs attached to pins A0 (Current), A1 (Voltage)

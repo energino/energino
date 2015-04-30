@@ -61,7 +61,12 @@ void reset() {
   settings.relaypin = RELAYPIN;
   settings.currentpin = CURRENTPIN;
   settings.voltagepin = VOLTAGEPIN;
+  strcpy (settings.apikey, "-");  
+  settings.feedid = 0;
+  strcpy (settings.feedurl, "-");  
 }
+
+void factoryCheck() {}
 
 void setup() {
   // Set serial port

@@ -92,7 +92,7 @@ void reset() {
   settings.voltagepin = VOLTAGEPIN;
   strcpy (settings.apikey, APIKEY);
   settings.feedid = FEEDID;
-  strcpy (settings.feedsurl, FEEDSURL);
+  strcpy (settings.feedurl, FEEDSURL);
 }
 
 // Instantiate a server enabling the the Yun to listen for connected clients.
@@ -125,12 +125,13 @@ void setup() {
   lastUpdated = millis();
 }
 
+void factoryCheck() {}
+  
 void loop() {
   // Make sure that update period is not too high
-  // when pushing data to Xively (one sample every
-  // 2 seconds should be a reasonable lower boud)
-  if ((settings.feedid != 0) && (settings.period < 2000)) {
-    settings.period = 2000;
+  // when pushing data to Xively
+  if ((settings.feedid != 0) && (settings.period < PERIOD)) {
+    settings.period = PERIOD;
   }
   // Get clients coming from server
   YunClient client = server.accept();

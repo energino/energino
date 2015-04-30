@@ -89,6 +89,8 @@ void setup() {
   lastUpdated = millis();
 }
 
+void factoryCheck() {}
+
 void loop() {
   // Parse incoming commands
   serParseCommand();
