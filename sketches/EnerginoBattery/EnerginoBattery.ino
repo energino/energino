@@ -1,7 +1,10 @@
 /*
- * Energino
+ * EnerginoBattery
  *
- * Energino is a energy consumption meter for DC loads (win average).
+ * EnerginoBattery is optimized for the ABSOLUTE PLMU. The script includes an
+ * empirical battery discharge model for the 30Ah battery. Resistor and current
+ * sensor paramenters are set to the values used in the Energino embedded with
+ * the PLMU prototype.
  *
  * Circuit:
  *  Analog inputs attached to pins A0 (Current), A1 (Voltage)
