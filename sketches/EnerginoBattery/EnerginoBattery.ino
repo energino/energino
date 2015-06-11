@@ -22,7 +22,7 @@
  *  #Z, print settings
  *
  * Serial putput:
- *   #Energino,0,<voltage>,<current>,<power>,<relay>,<period>,<samples>,<voltage_error>,<current_error>
+ *   #Energino,0,<voltage>,<current>,<power>,<relay>,<period>,<samples>,<voltage_error>,<current_error>,<battery>,<battery_fitted>
  *
  * created 31 October 2012
  * by Roberto Riggio
