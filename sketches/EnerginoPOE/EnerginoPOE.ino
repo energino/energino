@@ -45,7 +45,7 @@
  *
  * created 22 August 2014
  * by Roberto Riggio
- *j,
+ *
  * This code is released under the BSD Licence
  *
  */
